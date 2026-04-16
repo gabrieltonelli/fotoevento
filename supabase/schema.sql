@@ -106,6 +106,38 @@ CREATE POLICY "Event owners can manage photos"
   );
 
 -- =============================================
+-- PAYMENTS TABLE
+-- =============================================
+CREATE TABLE IF NOT EXISTS payments (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  event_id UUID REFERENCES events(id) ON DELETE SET NULL,
+  plan TEXT NOT NULL,
+  amount INTEGER NOT NULL DEFAULT 0,
+  currency TEXT DEFAULT 'ARS',
+  processor TEXT NOT NULL, -- 'stripe' | 'mercadopago'
+  payment_external_id TEXT DEFAULT '',
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);
+CREATE INDEX IF NOT EXISTS idx_payments_event_id ON payments(event_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+
+-- Enable RLS
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+
+-- Payments policies
+CREATE POLICY "Users can view own payments"
+  ON payments FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Service role can insert payments"
+  ON payments FOR INSERT
+  WITH CHECK (true);
+
+-- =============================================
 -- STORAGE BUCKET
 -- =============================================
 -- Create bucket for event photos (run in Supabase Dashboard > Storage)

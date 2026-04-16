@@ -17,7 +17,7 @@ FotoEvento permite a los invitados de un evento subir fotos desde su celular, qu
 - 📺 **Pantalla en Tiempo Real** - Proyección de fotos con transiciones suaves vía Supabase Realtime
 - 🔗 **QR + Código Corto** - Acceso fácil para invitados mediante QR imprimible
 - 🎨 **Múltiples Skins** - Temas visuales para bodas, cumpleaños, corporativos, etc.
-- 💳 **Sistema de Pagos** - Planes gratuito, Pro y Premium con Stripe
+- 💳 **Pagos Duales** - Stripe + MercadoPago Argentina, habilitables por variable de entorno
 - 🔐 **Auth Flexible** - Login con email/password o Google, con opción de acceso anónimo
 - 📊 **Dashboard Completo** - Estadísticas, gestión de eventos, configuración
 - 🤖 **Chatbot en Landing** - Asistente de preguntas frecuentes
@@ -37,7 +37,8 @@ FotoEvento permite a los invitados de un evento subir fotos desde su celular, qu
 | **Supabase** | Auth, DB (PostgreSQL), Storage, Realtime |
 | **Node.js + Express** | Backend API |
 | **OpenAI GPT-4o-mini** | Moderación de contenido de imágenes |
-| **Stripe** | Procesamiento de pagos |
+| **Stripe** | Procesamiento de pagos internacional |
+| **MercadoPago** | Pagos Argentina (tarjeta, transferencia, Mercado Crédito) |
 | **vite-plugin-pwa** | Progressive Web App |
 
 ---
@@ -91,6 +92,7 @@ fotoevento/
 - Node.js >= 18
 - Cuenta en [Supabase](https://supabase.com)
 - (Opcional) Cuenta en [Stripe](https://stripe.com)
+- (Opcional) Cuenta en [MercadoPago Developers](https://www.mercadopago.com.ar/developers)
 - (Opcional) API Key de [OpenAI](https://platform.openai.com)
 
 ### 1. Clonar el repositorio
@@ -182,9 +184,45 @@ Esto inicia:
 
 ### Precios (`/pricing`)
 - 3 planes: Gratuito, Pro ($4.990 ARS), Premium ($9.990 ARS)
-- Checkout con Stripe
+- Selector de procesador de pago: **Stripe** o **Mercado Pago**
+- Habilitado dinámicamente según `PAYMENT_PROCESSORS` en `.env`
+- Checkout real con redirect a la pasarela seleccionada
+- Activación automática del plan al volver del pago exitoso
 
 ---
+
+## 💳 Sistema de Pagos
+
+### Procesadores habilitados por variable de entorno
+
+```bash
+# Habilitar solo Stripe
+PAYMENT_PROCESSORS=stripe
+
+# Habilitar solo MercadoPago
+PAYMENT_PROCESSORS=mercadopago
+
+# Habilitar ambos (el usuario elige en la UI)
+PAYMENT_PROCESSORS=stripe,mercadopago
+PAYMENT_DEFAULT_PROCESSOR=mercadopago
+```
+
+### Flujo de pago
+
+1. El usuario selecciona un plan y procesador en `/pricing`
+2. El backend crea una sesión de checkout (Stripe Checkout / MP Preference)
+3. El usuario es redirigido a la pasarela de pago
+4. Al completar el pago, la pasarela redirige a `/dashboard?payment=success&plan=pro`
+5. El Dashboard detecta el parámetro y llama a `/api/payments/activate-from-redirect`
+6. El plan se activa automáticamente y se muestra un banner de confirmación
+7. En paralelo, el webhook de la pasarela confirma el pago (redundancia)
+
+### Webhooks
+
+| Procesador | Endpoint |
+|---|---|
+| Stripe | `POST /api/payments/webhook/stripe` |
+| MercadoPago | `POST /api/payments/webhook/mercadopago` |
 
 ## 🐳 Despliegue
 

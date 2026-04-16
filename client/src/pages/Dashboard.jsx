@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { motion } from 'framer-motion';
 import {
     Plus, Calendar, Camera, Users, Settings, Trash2,
     QrCode, Monitor, BarChart3, Image as ImageIcon,
-    LogOut, ChevronRight, Eye, EyeOff
+    LogOut, ChevronRight, Eye, EyeOff, CheckCircle, Crown
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import toast from 'react-hot-toast';
@@ -14,9 +14,49 @@ import toast from 'react-hot-toast';
 export default function Dashboard() {
     const { user, signOut, getToken } = useAuth();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ totalEvents: 0, totalPhotos: 0, activeEvents: 0 });
+    const [paymentSuccess, setPaymentSuccess] = useState(false);
+
+    // Detectar retorno de pasarela de pago y activar plan automáticamente
+    useEffect(() => {
+        const paymentStatus = searchParams.get('payment');
+        const plan = searchParams.get('plan');
+        const eventId = searchParams.get('event');
+        const processor = searchParams.get('processor');
+
+        if (paymentStatus === 'success' && plan) {
+            setPaymentSuccess(true);
+            const token = getToken();
+            if (token) {
+                api.activateFromRedirect({
+                    plan,
+                    eventId: eventId || '',
+                    processor: processor || '',
+                }, token)
+                    .then((res) => {
+                        if (res.alreadyActive) {
+                            toast.success('¡Tu plan ya estaba activo!');
+                        } else {
+                            toast.success(`¡Plan ${plan.toUpperCase()} activado exitosamente! 🎉`);
+                        }
+                        // Limpiar query params
+                        setSearchParams({});
+                        // Recargar eventos
+                        loadEvents();
+                    })
+                    .catch(() => {
+                        toast.success('¡Pago recibido! Tu plan se activará en breve.');
+                        setSearchParams({});
+                    });
+            }
+
+            // Auto-ocultar banner después de 8 seg
+            setTimeout(() => setPaymentSuccess(false), 8000);
+        }
+    }, []);
 
     useEffect(() => {
         loadEvents();
@@ -96,6 +136,24 @@ export default function Dashboard() {
             <Navbar />
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">
+                {/* Payment Success Banner */}
+                {paymentSuccess && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 flex items-center gap-3"
+                    >
+                        <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                            <CheckCircle className="w-6 h-6 text-green-400" />
+                        </div>
+                        <div>
+                            <p className="font-semibold text-green-300">¡Pago exitoso!</p>
+                            <p className="text-green-400/70 text-sm">Tu plan fue activado automáticamente. Ya podés disfrutar de todas las funcionalidades premium.</p>
+                        </div>
+                        <Crown className="w-8 h-8 text-green-400/30 ml-auto flex-shrink-0" />
+                    </motion.div>
+                )}
+
                 {/* Header */}
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
                     <div>

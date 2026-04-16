@@ -71,10 +71,25 @@ export const api = {
         fetchAPI(`/api/events/${eventId}/photos`),
 
     // Payments
+    getProcessors: () =>
+        fetchAPI('/api/payments/processors'),
+
     createCheckout: (data, token) =>
         fetchAPI('/api/payments/checkout', {
             method: 'POST',
             body: JSON.stringify(data),
+            headers: { Authorization: `Bearer ${token}` },
+        }),
+
+    activateFromRedirect: (data, token) =>
+        fetchAPI('/api/payments/activate-from-redirect', {
+            method: 'POST',
+            body: JSON.stringify(data),
+            headers: { Authorization: `Bearer ${token}` },
+        }),
+
+    getPaymentStatus: (eventId, token) =>
+        fetchAPI(`/api/payments/status/${eventId}`, {
             headers: { Authorization: `Bearer ${token}` },
         }),
 

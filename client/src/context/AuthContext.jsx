@@ -5,12 +5,40 @@ const AuthContext = createContext({});
 
 export const useAuth = () => useContext(AuthContext);
 
+// ─── Modo Desarrollo ───
+const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true';
+
+const DEV_USER = DEV_MODE ? {
+    id: import.meta.env.VITE_DEV_USER_ID || 'dev-user-00000-00000-00000',
+    email: import.meta.env.VITE_DEV_USER_EMAIL || 'dev@fotoevento.dev',
+    user_metadata: {
+        full_name: import.meta.env.VITE_DEV_USER_NAME || 'Dev User',
+    },
+    app_metadata: {},
+    aud: 'authenticated',
+    role: 'authenticated',
+    created_at: new Date().toISOString(),
+} : null;
+
+const DEV_SESSION = DEV_MODE ? {
+    access_token: 'dev-token-fotoevento',
+    refresh_token: 'dev-refresh-token',
+    user: DEV_USER,
+} : null;
+
+if (DEV_MODE) {
+    console.log('🛠️ Modo Desarrollo activo — usuario mock:', DEV_USER.email);
+}
+
 export function AuthProvider({ children }) {
-    const [user, setUser] = useState(null);
-    const [session, setSession] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState(DEV_MODE ? DEV_USER : null);
+    const [session, setSession] = useState(DEV_MODE ? DEV_SESSION : null);
+    const [loading, setLoading] = useState(DEV_MODE ? false : true);
 
     useEffect(() => {
+        // En modo dev, no conectamos con Supabase Auth
+        if (DEV_MODE) return;
+
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
             setUser(session?.user ?? null);
@@ -27,6 +55,10 @@ export function AuthProvider({ children }) {
     }, []);
 
     const signUp = async (email, password, fullName) => {
+        if (DEV_MODE) {
+            console.log('🛠️ [DevMode] signUp simulado:', email);
+            return { data: { user: DEV_USER, session: DEV_SESSION }, error: null };
+        }
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -38,11 +70,19 @@ export function AuthProvider({ children }) {
     };
 
     const signIn = async (email, password) => {
+        if (DEV_MODE) {
+            console.log('🛠️ [DevMode] signIn simulado:', email);
+            return { data: { user: DEV_USER, session: DEV_SESSION }, error: null };
+        }
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         return { data, error };
     };
 
     const signInWithGoogle = async () => {
+        if (DEV_MODE) {
+            console.log('🛠️ [DevMode] Google login simulado');
+            return { data: { user: DEV_USER }, error: null };
+        }
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: { redirectTo: `${window.location.origin}/dashboard` },
@@ -51,11 +91,19 @@ export function AuthProvider({ children }) {
     };
 
     const signOut = async () => {
+        if (DEV_MODE) {
+            console.log('🛠️ [DevMode] signOut simulado');
+            // En dev mode, no cerramos la sesión para no perder el acceso
+            return { error: null };
+        }
         const { error } = await supabase.auth.signOut();
         return { error };
     };
 
-    const getToken = () => session?.access_token;
+    const getToken = () => {
+        if (DEV_MODE) return 'dev-token-fotoevento';
+        return session?.access_token;
+    };
 
     const value = {
         user,
@@ -66,6 +114,7 @@ export function AuthProvider({ children }) {
         signInWithGoogle,
         signOut,
         getToken,
+        isDevMode: DEV_MODE,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

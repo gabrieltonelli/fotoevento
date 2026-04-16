@@ -1,16 +1,21 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+const hasValidKey = process.env.OPENAI_API_KEY &&
+    !process.env.OPENAI_API_KEY.startsWith('sk-tu') &&
+    process.env.OPENAI_API_KEY !== 'sk-...';
+
+let openai = null;
+if (hasValidKey) {
+    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 /**
  * Moderates an image using OpenAI's vision model.
  * Returns { safe: boolean, reason: string, score: number }
  */
 export async function moderateImage(imageBuffer) {
-    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.startsWith('sk-tu')) {
-        console.warn('⚠️ OpenAI API key not configured. Skipping moderation.');
+    if (!openai) {
+        console.warn('⚠️ OpenAI no configurado. Moderación omitida.');
         return { safe: true, reason: '', score: 1 };
     }
 

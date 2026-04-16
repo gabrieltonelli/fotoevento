@@ -9,6 +9,8 @@ import {
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 
+import backgroundImage from '../assets/images/bg1.png';
+
 /* ─── Hero Section ─── */
 function Hero() {
     const ref = useRef(null);
@@ -16,13 +18,19 @@ function Hero() {
     const y = useTransform(scrollYProgress, [0, 1], [0, 300]);
     const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
     const scale = useTransform(scrollYProgress, [0, 0.5], [1, 0.8]);
+    const bgScale = useTransform(scrollYProgress, [0, 1], [1.1, 1.3]);
 
     return (
         <section ref={ref} className="relative min-h-screen flex items-center justify-center overflow-hidden">
-            {/* Background Video Placeholder - Gradient animation */}
-            <motion.div style={{ y }} className="absolute inset-0 z-0">
-                <div className="absolute inset-0 bg-gradient-to-br from-dark-950 via-primary-950 to-dark-950" />
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary-900/20 via-transparent to-transparent" />
+            {/* Background Image with Parallax and Zoom */}
+            <motion.div style={{ y, scale: bgScale }} className="absolute inset-0 z-0">
+                <div
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                    style={{ backgroundImage: `url(${backgroundImage})` }}
+                />
+                {/* Overlays for depth and readability */}
+                <div className="absolute inset-0 bg-gradient-to-b from-dark-950/70 via-dark-950/50 to-dark-950" />
+                <div className="absolute inset-0 bg-primary-950/20 mix-blend-overlay" />
 
                 {/* Animated orbs */}
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl animate-float" />

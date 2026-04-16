@@ -113,8 +113,23 @@ cp .env.template .env
 
 1. Crear proyecto en [supabase.com](https://supabase.com)
 2. Ir a **SQL Editor** y ejecutar `supabase/schema.sql`
-3. Ir a **Storage** y crear un bucket llamado `event-photos` (público)
+3. Ir a **Storage** y asegurarte de que existe el bucket `event-photos` (público). El schema intenta crearlo pero a veces requiere acción manual en el Dashboard.
 4. Copiar URL y keys a `.env`
+
+### 4. Personalización y Auth
+
+#### 📧 Emails Personalizados
+Para que los correos de confirmación tengan tu marca:
+1. Ir a **Authentication** -> **Email Templates** en Supabase.
+2. Modificar el template de "Confirm Signup" con tu HTML/Texto.
+3. **Importante**: Para cambiar el remitente (que no diga `noreply@mail.app.supabase.io`), debés configurar un servicio de SMTP propio (SendGrid, Resend, etc.) en **Authentication** -> **SMTP Settings**.
+
+#### 🔑 Google Auth
+Si recibís el error `Unsupported provider: provider is not enabled`:
+1. Ir a **Authentication** -> **Providers** -> **Google**.
+2. Habilitar el switch.
+3. Configurar el `Client ID` y `Client Secret` obtenidos de Google Cloud Console.
+4. Agregar la `Callback URL` que te da Supabase en tu consola de Google.
 
 ### 4. Instalar dependencias
 

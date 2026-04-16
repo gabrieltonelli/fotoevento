@@ -11,15 +11,29 @@ export default function Register() {
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [showPw, setShowPw] = useState(false);
     const [loading, setLoading] = useState(false);
 
+    const validatePassword = (pw) => {
+        // Al menos 8 caracteres, una mayúscula, una minúscula y un número
+        const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+        return regex.test(pw);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (password.length < 6) {
-            toast.error('La contraseña debe tener al menos 6 caracteres');
+        
+        if (password !== confirmPassword) {
+            toast.error('Las contraseñas no coinciden');
             return;
         }
+
+        if (!validatePassword(password)) {
+            toast.error('La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número');
+            return;
+        }
+
         setLoading(true);
         const { error } = await signUp(email, password, fullName);
         setLoading(false);
@@ -69,6 +83,7 @@ export default function Register() {
                                 onChange={(e) => setFullName(e.target.value)}
                                 className="input-field !pl-11"
                                 required
+                                maxLength={100}
                             />
                         </div>
 
@@ -88,16 +103,31 @@ export default function Register() {
                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
                             <input
                                 type={showPw ? 'text' : 'password'}
-                                placeholder="Contraseña (mín. 6 caracteres)"
+                                placeholder="Contraseña"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="input-field !pl-11 !pr-11"
                                 required
-                                minLength={6}
+                                minLength={8}
+                                maxLength={72}
                             />
                             <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
                                 {showPw ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
+                        </div>
+
+                        <div className="relative">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
+                            <input
+                                type={showPw ? 'text' : 'password'}
+                                placeholder="Repetir Contraseña"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                className="input-field !pl-11 !pr-11"
+                                required
+                                minLength={8}
+                                maxLength={72}
+                            />
                         </div>
 
                         <button type="submit" disabled={loading} className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-50">

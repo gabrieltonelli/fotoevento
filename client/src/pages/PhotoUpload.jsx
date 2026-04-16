@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Upload, X, Check, AlertTriangle, User, Image as ImageIcon } from 'lucide-react';
+import { resizeImage } from '../utils/imageUtils';
 import toast from 'react-hot-toast';
 
 export default function PhotoUpload() {
@@ -68,7 +69,15 @@ export default function PhotoUpload() {
             setPhotos(prev => prev.map((p, j) => j === i ? { ...p, status: 'uploading' } : p));
 
             try {
-                await api.uploadPhoto(shortCode, photos[i].file, null, guestName);
+                // Achicar la imagen antes de subir
+                let fileToUpload = photos[i].file;
+                try {
+                    fileToUpload = await resizeImage(photos[i].file);
+                } catch (resizeErr) {
+                    console.warn('Error resizing, uploading original:', resizeErr);
+                }
+
+                await api.uploadPhoto(shortCode, fileToUpload, null, guestName);
                 setPhotos(prev => prev.map((p, j) => j === i ? { ...p, status: 'success', message: '¡Aprobada!' } : p));
                 setUploadedCount(c => c + 1);
             } catch (err) {

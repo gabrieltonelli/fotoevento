@@ -141,16 +141,16 @@ CREATE POLICY "Service role can insert payments"
 -- STORAGE BUCKET
 -- =============================================
 -- Create bucket for event photos (run in Supabase Dashboard > Storage)
--- INSERT INTO storage.buckets (id, name, public) VALUES ('event-photos', 'event-photos', true);
+INSERT INTO storage.buckets (id, name, public) VALUES ('event-photos', 'event-photos', true) ON CONFLICT DO NOTHING;
 
 -- Storage policies
--- CREATE POLICY "Anyone can upload photos"
---   ON storage.objects FOR INSERT
---   WITH CHECK (bucket_id = 'event-photos');
+CREATE POLICY "Anyone can upload photos"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'event-photos');
 
--- CREATE POLICY "Anyone can view photos"
---   ON storage.objects FOR SELECT
---   USING (bucket_id = 'event-photos');
+CREATE POLICY "Anyone can view photos"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'event-photos');
 
 -- =============================================
 -- REALTIME

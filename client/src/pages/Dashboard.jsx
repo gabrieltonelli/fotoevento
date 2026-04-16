@@ -74,40 +74,9 @@ export default function Dashboard() {
                 activeEvents: data.events?.filter(e => e.is_active)?.length || 0,
             });
         } catch (err) {
-            // Mostrar datos demo si no hay API
-            setEvents([
-                {
-                    id: 'demo-1',
-                    name: 'Boda de María y Juan',
-                    type: 'wedding',
-                    date: '2026-05-15',
-                    short_code: 'BODA2026',
-                    is_active: true,
-                    photo_count: 142,
-                    guest_count: 85,
-                },
-                {
-                    id: 'demo-2',
-                    name: 'Cumpleaños de Ana',
-                    type: 'birthday',
-                    date: '2026-04-20',
-                    short_code: 'ANA30',
-                    is_active: true,
-                    photo_count: 67,
-                    guest_count: 35,
-                },
-                {
-                    id: 'demo-3',
-                    name: 'Meeting Anual Corp',
-                    type: 'corporate',
-                    date: '2026-06-10',
-                    short_code: 'CORP26',
-                    is_active: false,
-                    photo_count: 0,
-                    guest_count: 0,
-                },
-            ]);
-            setStats({ totalEvents: 3, totalPhotos: 209, activeEvents: 2 });
+            console.error('Error loading events:', err);
+            setEvents([]);
+            setStats({ totalEvents: 0, totalPhotos: 0, activeEvents: 0 });
         } finally {
             setLoading(false);
         }

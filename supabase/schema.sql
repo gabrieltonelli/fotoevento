@@ -1,5 +1,5 @@
 -- =============================================
--- FotoEvento - Supabase Database Schema
+-- Foto Eventos - Supabase Database Schema
 -- =============================================
 -- Run this SQL in your Supabase SQL Editor
 -- (Dashboard > SQL Editor > New Query)

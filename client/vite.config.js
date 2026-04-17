@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'robots.txt', 'apple-touch-icon.png'],
       manifest: {
-        name: 'FotoEvento - Fotos en Vivo para tu Evento',
-        short_name: 'FotoEvento',
+        name: 'Foto Eventos - Fotos en Vivo para tu Evento',
+        short_name: 'Foto Eventos',
         description: 'Comparte fotos en tiempo real en tu evento',
         theme_color: '#6366f1',
         background_color: '#0f172a',

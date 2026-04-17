@@ -1,8 +1,8 @@
-# 📸 FotoEvento
+# 📸 Foto Eventos
 
 > **Plataforma PWA para compartir fotos en tiempo real durante eventos.**
 
-FotoEvento permite a los invitados de un evento subir fotos desde su celular, que se proyectan en vivo en una pantalla. Todas las fotos son moderadas por inteligencia artificial antes de ser mostradas.
+Foto Eventos permite a los invitados de un evento subir fotos desde su celular, que se proyectan en vivo en una pantalla. Todas las fotos son moderadas por inteligencia artificial antes de ser mostradas.
 
 ![Status](https://img.shields.io/badge/status-en%20desarrollo-yellow)
 ![License](https://img.shields.io/badge/license-MIT-blue)

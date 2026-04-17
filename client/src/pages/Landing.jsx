@@ -183,7 +183,7 @@ function Features() {
                     viewport={{ once: true }}
                     className="text-center mb-16"
                 >
-                    <h2 className="section-title">¿Por qué FotoEvento?</h2>
+                    <h2 className="section-title">¿Por qué Foto Eventos?</h2>
                     <p className="section-subtitle">
                         Todo lo que necesitás para que las fotos de tu evento sean una experiencia inolvidable.
                     </p>
@@ -310,7 +310,7 @@ function FAQ() {
     const faqs = [
         {
             q: '¿Los invitados necesitan descargar una app?',
-            a: 'No. FotoEvento es una aplicación web progresiva (PWA). Los invitados solo necesitan escanear el QR o ingresar el código corto desde el navegador de su celular.'
+            a: 'No. Foto Eventos es una aplicación web progresiva (PWA). Los invitados solo necesitan escanear el QR o ingresar el código corto desde el navegador de su celular.'
         },
         {
             q: '¿Cómo funciona la moderación por IA?',
@@ -344,7 +344,7 @@ function FAQ() {
                     className="text-center mb-16"
                 >
                     <h2 className="section-title">Preguntas Frecuentes</h2>
-                    <p className="section-subtitle">Todo lo que necesitás saber sobre FotoEvento.</p>
+                    <p className="section-subtitle">Todo lo que necesitás saber sobre Foto Eventos.</p>
                 </motion.div>
 
                 <div className="space-y-3">
@@ -421,7 +421,7 @@ function CTA() {
 function Chatbot() {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([
-        { from: 'bot', text: '¡Hola! 👋 Soy el asistente de FotoEvento. ¿En qué puedo ayudarte?' }
+        { from: 'bot', text: '¡Hola! 👋 Soy el asistente de Foto Eventos. ¿En qué puedo ayudarte?' }
     ]);
     const [input, setInput] = useState('');
     const messagesEnd = useRef(null);
@@ -486,7 +486,7 @@ function Chatbot() {
                                 <Sparkles className="w-4 h-4 text-white" />
                             </div>
                             <div>
-                                <p className="font-semibold text-white text-sm">Asistente FotoEvento</p>
+                                <p className="font-semibold text-white text-sm">Asistente Foto Eventos</p>
                                 <p className="text-white/60 text-xs">Online ahora</p>
                             </div>
                         </div>

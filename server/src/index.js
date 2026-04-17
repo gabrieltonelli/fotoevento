@@ -36,5 +36,5 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 FotoEvento API running on http://localhost:${PORT}`);
+    console.log(`🚀 Foto Eventos API running on http://localhost:${PORT}`);
 });

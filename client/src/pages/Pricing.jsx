@@ -107,7 +107,7 @@ export default function Pricing() {
             name: 'Gratuito',
             price: '0',
             period: 'siempre',
-            description: 'Probá FotoEvento en tu próximo evento.',
+            description: 'Probá Foto Eventos en tu próximo evento.',
             icon: Star,
             gradient: 'from-gray-500 to-gray-600',
             features: [
@@ -203,8 +203,8 @@ export default function Pricing() {
                                         key={proc}
                                         onClick={() => setSelectedProcessor(proc)}
                                         className={`px-4 py-2.5 rounded-xl transition-all duration-200 ${selectedProcessor === proc
-                                                ? 'bg-gradient-to-r from-primary-600 to-accent-600 text-white shadow-lg shadow-primary-500/20'
-                                                : 'text-white/50 hover:text-white hover:bg-white/5'
+                                            ? 'bg-gradient-to-r from-primary-600 to-accent-600 text-white shadow-lg shadow-primary-500/20'
+                                            : 'text-white/50 hover:text-white hover:bg-white/5'
                                             }`}
                                     >
                                         <ProcessorLogo name={proc} />
@@ -223,8 +223,8 @@ export default function Pricing() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.1 + 0.2 }}
                                 className={`relative rounded-2xl p-1 ${plan.popular
-                                        ? 'bg-gradient-to-br from-primary-500 to-accent-500'
-                                        : ''
+                                    ? 'bg-gradient-to-br from-primary-500 to-accent-500'
+                                    : ''
                                     }`}
                             >
                                 {plan.popular && (

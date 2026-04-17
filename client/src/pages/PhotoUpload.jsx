@@ -22,7 +22,7 @@ export default function PhotoUpload() {
             .then(data => setEvent(data.event))
             .catch(() => {
                 setEvent({
-                    name: 'Evento FotoEvento',
+                    name: 'Evento Foto Eventos',
                     type: 'party',
                     require_auth: false,
                 });
@@ -124,8 +124,8 @@ export default function PhotoUpload() {
                 {/* Upload Zone */}
                 <div
                     className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer ${dragOver
-                            ? 'border-primary-500 bg-primary-500/10'
-                            : 'border-white/10 hover:border-white/20 hover:bg-white/5'
+                        ? 'border-primary-500 bg-primary-500/10'
+                        : 'border-white/10 hover:border-white/20 hover:bg-white/5'
                         }`}
                     onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                     onDragLeave={() => setDragOver(false)}

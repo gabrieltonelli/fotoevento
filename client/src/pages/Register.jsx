@@ -23,7 +23,7 @@ export default function Register() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (password !== confirmPassword) {
             toast.error('Las contraseñas no coinciden');
             return;
@@ -66,7 +66,7 @@ export default function Register() {
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
                         <Camera className="w-6 h-6 text-white" />
                     </div>
-                    <span className="font-display text-2xl font-bold gradient-text">FotoEvento</span>
+                    <span className="font-display text-2xl font-bold gradient-text">Foto Eventos</span>
                 </Link>
 
                 <div className="glass rounded-2xl p-8">

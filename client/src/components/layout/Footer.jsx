@@ -12,7 +12,7 @@ export default function Footer() {
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
                                 <Camera className="w-5 h-5 text-white" />
                             </div>
-                            <span className="font-display text-xl font-bold gradient-text">FotoEvento</span>
+                            <span className="font-display text-xl font-bold gradient-text">Foto Eventos</span>
                         </Link>
                         <p className="text-white/50 text-sm leading-relaxed">
                             Captura cada momento especial de tu evento. Fotos en vivo, moderadas por IA, proyectadas en tiempo real.
@@ -52,7 +52,7 @@ export default function Footer() {
                 {/* Bottom */}
                 <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
                     <p className="text-white/40 text-sm flex items-center gap-1">
-                        © {new Date().getFullYear()} FotoEvento. Hecho con <Heart className="w-3 h-3 text-red-500 fill-current" /> en Argentina.
+                        © {new Date().getFullYear()} Foto Eventos. Hecho con <Heart className="w-3 h-3 text-red-500 fill-current" /> en Argentina.
                     </p>
                     <div className="flex items-center gap-4">
                         <a href="https://github.com/gabrieltonelli/fotoevento" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white transition-colors">

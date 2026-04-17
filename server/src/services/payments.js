@@ -1,5 +1,5 @@
 /**
- * FotoEvento - Payment Gateway Service
+ * Foto Eventos - Payment Gateway Service
  *
  * Abstrae los procesadores de pago (Stripe y MercadoPago)
  * habilitados por variable de entorno PAYMENT_PROCESSORS.
@@ -159,7 +159,7 @@ export async function createStripeCheckout({ plan, eventId, userId }) {
                 price_data: {
                     currency: selectedPlan.currency.toLowerCase(),
                     product_data: {
-                        name: `FotoEvento ${selectedPlan.name}`,
+                        name: `Foto Eventos ${selectedPlan.name}`,
                         description: selectedPlan.features,
                         images: [`${appUrl}/favicon.svg`],
                     },
@@ -227,7 +227,7 @@ export async function createMPCheckout({ plan, eventId, userId }) {
             items: [
                 {
                     id: `fotoevento-${plan}`,
-                    title: `FotoEvento ${selectedPlan.name}`,
+                    title: `Foto Eventos ${selectedPlan.name}`,
                     description: selectedPlan.features,
                     quantity: 1,
                     unit_price: selectedPlan.price,

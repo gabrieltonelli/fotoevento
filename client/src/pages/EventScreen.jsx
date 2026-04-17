@@ -87,7 +87,7 @@ export default function EventScreen() {
                             <Camera className="w-5 h-5 text-white" />
                         </div>
                         <h1 className={`font-display text-4xl font-bold ${isDark ? 'gradient-text' : 'text-gray-900'}`}>
-                            {event?.name || 'FotoEvento'}
+                            {event?.name || 'Foto Eventos'}
                         </h1>
                     </div>
                     <p className={`text-lg ${isDark ? 'text-white/40' : 'text-gray-500'}`}>

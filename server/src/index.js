@@ -35,6 +35,12 @@ app.use((err, req, res, next) => {
     });
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 Foto Eventos API running on http://localhost:${PORT}`);
-});
+// Export app for serverless use
+export default app;
+
+// Only listen if not in a serverless environment
+if (process.env.NODE_ENV !== 'production' || !process.env.NETLIFY) {
+    app.listen(PORT, () => {
+        console.log(`🚀 Foto Eventos API running on http://localhost:${PORT}`);
+    });
+}

@@ -13,6 +13,8 @@ export default function EventScreen() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [showQR, setShowQR] = useState(true);
 
+    const rotationLimit = parseInt(import.meta.env.VITE_SCREEN_ROTATION_LIMIT || '4', 10);
+
     const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
     const uploadUrl = `${appUrl}/e/${shortCode}`;
 
@@ -42,7 +44,8 @@ export default function EventScreen() {
                 filter: `event_short_code=eq.${shortCode}`,
             }, (payload) => {
                 if (payload.new.status === 'approved') {
-                    setPhotos(prev => [...prev, payload.new]);
+                    setPhotos(prev => [payload.new, ...prev]);
+                    setCurrentIndex(0); // Show it immediately
                 }
             })
             .subscribe();
@@ -53,11 +56,15 @@ export default function EventScreen() {
     // Auto-cycle through photos
     useEffect(() => {
         if (photos.length === 0) return;
+        
+        const limit = Math.min(photos.length, rotationLimit);
+        
         const interval = setInterval(() => {
-            setCurrentIndex(prev => (prev + 1) % photos.length);
+            setCurrentIndex(prev => (prev + 1) % limit);
         }, 5000);
+        
         return () => clearInterval(interval);
-    }, [photos.length]);
+    }, [photos.length, rotationLimit]);
 
     const isDark = event?.dark_mode !== false;
 

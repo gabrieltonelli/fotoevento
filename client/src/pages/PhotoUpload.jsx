@@ -17,6 +17,7 @@ export default function PhotoUpload() {
     const [uploading, setUploading] = useState(false);
     const [dragOver, setDragOver] = useState(false);
     const [uploadedCount, setUploadedCount] = useState(0);
+    const photoIdCounter = useRef(0);
 
     useEffect(() => {
         // Load event info
@@ -54,9 +55,10 @@ export default function PhotoUpload() {
         }
 
         const newPhotos = filesToAdd.map(file => ({
+            id: ++photoIdCounter.current,
             file,
             preview: URL.createObjectURL(file),
-            status: 'pending', // pending | uploading | success | error
+            status: 'pending',
             message: '',
         }));
 
@@ -69,41 +71,48 @@ export default function PhotoUpload() {
         handleFiles(e.dataTransfer.files);
     };
 
-    const removePhoto = (index) => {
+    const removePhoto = (photoId) => {
         setPhotos(prev => {
-            URL.revokeObjectURL(prev[index].preview);
-            return prev.filter((_, i) => i !== index);
+            const photo = prev.find(p => p.id === photoId);
+            if (photo) URL.revokeObjectURL(photo.preview);
+            return prev.filter(p => p.id !== photoId);
         });
     };
 
     const uploadAll = async () => {
-        if (photos.length === 0) return;
+        const pendingPhotos = photos.filter(p => p.status === 'pending');
+        if (pendingPhotos.length === 0) return;
         setUploading(true);
 
-        for (let i = 0; i < photos.length; i++) {
-            if (photos[i].status === 'success') continue;
-
-            setPhotos(prev => prev.map((p, j) => j === i ? { ...p, status: 'uploading' } : p));
+        for (const photo of pendingPhotos) {
+            // Mark as uploading
+            setPhotos(prev => prev.map(p => p.id === photo.id ? { ...p, status: 'uploading' } : p));
 
             try {
-                // Achicar la imagen antes de subir
-                let fileToUpload = photos[i].file;
+                let fileToUpload = photo.file;
                 try {
-                    fileToUpload = await resizeImage(photos[i].file);
+                    fileToUpload = await resizeImage(photo.file);
                 } catch (resizeErr) {
                     console.warn('Error resizing, uploading original:', resizeErr);
                 }
 
                 await api.uploadPhoto(shortCode, fileToUpload, null, guestName);
-                setPhotos(prev => prev.map((p, j) => j === i ? { ...p, status: 'success', message: '¡Aprobada!' } : p));
+
+                // Mark as success
+                setPhotos(prev => prev.map(p => p.id === photo.id ? { ...p, status: 'success', message: '¡Aprobada!' } : p));
                 setUploadedCount(c => c + 1);
+
+                // Remove after 1.5s with animation
+                setTimeout(() => {
+                    removePhoto(photo.id);
+                }, 1500);
             } catch (err) {
-                setPhotos(prev => prev.map((p, j) => j === i ? { ...p, status: 'error', message: err.message } : p));
+                setPhotos(prev => prev.map(p => p.id === photo.id ? { ...p, status: 'error', message: err.message } : p));
             }
         }
 
         setUploading(false);
-        toast.success('¡Fotos enviadas!');
+        toast.success('¡Fotos enviadas! Podés seguir subiendo más.');
     };
 
     return (
@@ -178,19 +187,24 @@ export default function PhotoUpload() {
                             className="mt-6"
                         >
                             <div className="flex items-center justify-between mb-3">
-                                <span className="text-sm text-white/50">{photos.length} foto(s) seleccionada(s)</span>
+                                <span className="text-sm text-white/50">
+                                    {photos.filter(p => p.status === 'pending').length} pendiente(s)
+                                </span>
                                 {uploadedCount > 0 && (
-                                    <span className="text-sm text-green-400">{uploadedCount} subida(s)</span>
+                                    <span className="text-sm text-green-400">✓ {uploadedCount} subida(s) en total</span>
                                 )}
                             </div>
 
                             <div className="grid grid-cols-3 gap-3 mb-6">
-                                {photos.map((photo, i) => (
+                                <AnimatePresence mode="popLayout">
+                                {photos.map((photo) => (
                                     <motion.div
-                                        key={i}
+                                        key={photo.id}
+                                        layout
                                         initial={{ opacity: 0, scale: 0.8 }}
                                         animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.8 }}
+                                        exit={{ opacity: 0, scale: 0.5, y: -20 }}
+                                        transition={{ duration: 0.3 }}
                                         className="relative aspect-square rounded-xl overflow-hidden group"
                                     >
                                         <img src={photo.preview} alt="" className="w-full h-full object-cover" />
@@ -202,11 +216,21 @@ export default function PhotoUpload() {
                                             </div>
                                         )}
                                         {photo.status === 'success' && (
-                                            <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
-                                                <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
+                                            <motion.div 
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                className="absolute inset-0 bg-green-500/30 flex flex-col items-center justify-center"
+                                            >
+                                                <motion.div 
+                                                    initial={{ scale: 0 }}
+                                                    animate={{ scale: 1 }}
+                                                    transition={{ type: 'spring', stiffness: 300 }}
+                                                    className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center mb-1"
+                                                >
                                                     <Check className="w-6 h-6 text-white" />
-                                                </div>
-                                            </div>
+                                                </motion.div>
+                                                <span className="text-xs text-green-300 font-medium">¡Subida!</span>
+                                            </motion.div>
                                         )}
                                         {photo.status === 'error' && (
                                             <div className="absolute inset-0 bg-red-500/20 flex flex-col items-center justify-center p-2">
@@ -218,7 +242,7 @@ export default function PhotoUpload() {
                                         {/* Remove button */}
                                         {photo.status === 'pending' && (
                                             <button
-                                                onClick={(e) => { e.stopPropagation(); removePhoto(i); }}
+                                                onClick={(e) => { e.stopPropagation(); removePhoto(photo.id); }}
                                                 className="absolute top-2 right-2 w-6 h-6 rounded-full bg-dark-950/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                                             >
                                                 <X className="w-3 h-3 text-white" />
@@ -226,6 +250,7 @@ export default function PhotoUpload() {
                                         )}
                                     </motion.div>
                                 ))}
+                                </AnimatePresence>
                             </div>
 
                             {/* Upload Button */}

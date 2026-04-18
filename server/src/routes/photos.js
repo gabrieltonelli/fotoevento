@@ -55,6 +55,25 @@ router.post('/:eventId/photos', optionalAuth, upload.single('photo'), async (req
             return res.status(401).json({ message: 'Este evento requiere registro para subir fotos' });
         }
 
+        // --- DUPLICATE DETECTION ---
+        const fileHash = req.body.file_hash;
+        if (fileHash) {
+            const { data: existingPhoto, error: hashError } = await supabase
+                .from('photos')
+                .select('id')
+                .eq('event_id', event.id)
+                .eq('file_hash', fileHash)
+                .maybeSingle();
+
+            if (existingPhoto) {
+                return res.status(409).json({ 
+                    message: 'Esta imagen ya ha sido enviada con anterioridad a este evento.',
+                    is_duplicate: true 
+                });
+            }
+        }
+        // ---------------------------
+
         // Moderate image with AI
         let moderationResult = { safe: true, reason: '' };
         try {
@@ -96,6 +115,7 @@ router.post('/:eventId/photos', optionalAuth, upload.single('photo'), async (req
                 guest_name: guestName,
                 url: publicUrl,
                 storage_path: fileName,
+                file_hash: fileHash,
                 status: 'approved',
                 moderation_score: moderationResult.score || 1,
             })

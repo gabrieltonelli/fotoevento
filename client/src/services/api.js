@@ -50,10 +50,11 @@ export const api = {
         }),
 
     // Photos
-    uploadPhoto: async (eventId, file, token, guestName) => {
+    uploadPhoto: async (eventId, file, token, guestName, fileHash) => {
         const formData = new FormData();
         formData.append('photo', file);
         if (guestName) formData.append('guest_name', guestName);
+        if (fileHash) formData.append('file_hash', fileHash);
 
         const response = await fetch(`${API_URL}/api/events/${eventId}/photos`, {
             method: 'POST',

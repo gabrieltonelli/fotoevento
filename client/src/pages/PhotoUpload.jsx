@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Upload, X, Check, AlertTriangle, User, Image as ImageIcon } from 'lucide-react';
 import { resizeImage } from '../utils/imageUtils';
+import { hashFile } from '../utils/hashUtils';
 import toast from 'react-hot-toast';
 
 const MAX_PHOTOS_PER_UPLOAD = parseInt(import.meta.env.VITE_MAX_PHOTOS_PER_UPLOAD || '3', 10);
@@ -18,6 +19,7 @@ export default function PhotoUpload() {
     const [dragOver, setDragOver] = useState(false);
     const [uploadedCount, setUploadedCount] = useState(0);
     const photoIdCounter = useRef(0);
+    const uploadedHashes = useRef(new Set()); // Track hashes of already uploaded photos
 
     useEffect(() => {
         // Load event info
@@ -32,7 +34,7 @@ export default function PhotoUpload() {
             });
     }, [shortCode]);
 
-    const handleFiles = (files) => {
+    const handleFiles = async (files) => {
         const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
         if (validFiles.length === 0) {
             toast.error('Solo se permiten imágenes');
@@ -54,15 +56,48 @@ export default function PhotoUpload() {
             toast(`Se agregaron ${availableSlots} de ${validFiles.length} fotos (máx. ${MAX_PHOTOS_PER_UPLOAD} por envío)`, { icon: '⚠️' });
         }
 
-        const newPhotos = filesToAdd.map(file => ({
-            id: ++photoIdCounter.current,
-            file,
-            preview: URL.createObjectURL(file),
-            status: 'pending',
-            message: '',
-        }));
+        const newPhotos = [];
+        let duplicatesFound = 0;
 
-        setPhotos(prev => [...prev, ...newPhotos]);
+        for (const file of filesToAdd) {
+            // Compute hash for duplicate detection
+            let fileHash = '';
+            try {
+                fileHash = await hashFile(file);
+            } catch (e) {
+                console.warn('Hash error, skipping duplicate check:', e);
+            }
+
+            // Check against already uploaded hashes
+            if (fileHash && uploadedHashes.current.has(fileHash)) {
+                duplicatesFound++;
+                continue;
+            }
+
+            // Check against current selection
+            const alreadySelected = photos.some(p => p.hash === fileHash && fileHash);
+            if (alreadySelected) {
+                duplicatesFound++;
+                continue;
+            }
+
+            newPhotos.push({
+                id: ++photoIdCounter.current,
+                file,
+                hash: fileHash,
+                preview: URL.createObjectURL(file),
+                status: 'pending',
+                message: '',
+            });
+        }
+
+        if (duplicatesFound > 0) {
+            toast(`${duplicatesFound} foto(s) duplicada(s) detectada(s) y omitida(s)`, { icon: '🔁' });
+        }
+
+        if (newPhotos.length > 0) {
+            setPhotos(prev => [...prev, ...newPhotos]);
+        }
     };
 
     const handleDrop = (e) => {
@@ -96,7 +131,10 @@ export default function PhotoUpload() {
                     console.warn('Error resizing, uploading original:', resizeErr);
                 }
 
-                await api.uploadPhoto(shortCode, fileToUpload, null, guestName);
+                await api.uploadPhoto(shortCode, fileToUpload, null, guestName, photo.hash);
+
+                // Track hash as uploaded
+                if (photo.hash) uploadedHashes.current.add(photo.hash);
 
                 // Mark as success
                 setPhotos(prev => prev.map(p => p.id === photo.id ? { ...p, status: 'success', message: '¡Aprobada!' } : p));

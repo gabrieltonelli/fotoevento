@@ -24,14 +24,24 @@ export default function Navbar() {
                             <Camera className="w-5 h-5 text-white" />
                         </div>
                         <span className="font-display text-xl font-bold gradient-text">Foto Eventos</span>
+                        <span className="ml-2 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-mono text-white/30 self-center">
+                            v{__APP_VERSION__}
+                        </span>
                     </Link>
 
                     {/* Desktop Nav */}
                     <div className="hidden md:flex items-center gap-6">
-                        <Link to="/#features" className="btn-ghost text-sm">Características</Link>
-                        <Link to="/pricing" className="btn-ghost text-sm">Precios</Link>
-                        <Link to="/#faq" className="btn-ghost text-sm">FAQ</Link>
-                        {user ? (
+                        {!user ? (
+                            <>
+                                <Link to="/#features" className="btn-ghost text-sm">Características</Link>
+                                <Link to="/pricing" className="btn-ghost text-sm">Precios</Link>
+                                <Link to="/#faq" className="btn-ghost text-sm">FAQ</Link>
+                                <div className="flex items-center gap-3">
+                                    <Link to="/login" className="btn-ghost text-sm">Iniciar Sesión</Link>
+                                    <Link to="/register" className="btn-primary text-sm !px-6 !py-2">Comenzar Gratis</Link>
+                                </div>
+                            </>
+                        ) : (
                             <div className="flex items-center gap-3">
                                 <Link to="/dashboard" className="flex items-center gap-2 btn-ghost text-sm">
                                     <LayoutDashboard className="w-4 h-4" />
@@ -41,11 +51,6 @@ export default function Navbar() {
                                     <LogOut className="w-4 h-4" />
                                     Salir
                                 </button>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-3">
-                                <Link to="/login" className="btn-ghost text-sm">Iniciar Sesión</Link>
-                                <Link to="/register" className="btn-primary text-sm !px-6 !py-2">Comenzar Gratis</Link>
                             </div>
                         )}
                     </div>
@@ -70,18 +75,18 @@ export default function Navbar() {
                         className="md:hidden glass-dark border-t border-white/5"
                     >
                         <div className="px-4 py-4 space-y-2">
-                            <Link to="/#features" className="block btn-ghost text-sm" onClick={() => setMobileOpen(false)}>Características</Link>
-                            <Link to="/pricing" className="block btn-ghost text-sm" onClick={() => setMobileOpen(false)}>Precios</Link>
-                            <Link to="/#faq" className="block btn-ghost text-sm" onClick={() => setMobileOpen(false)}>FAQ</Link>
-                            {user ? (
+                            {!user ? (
                                 <>
-                                    <Link to="/dashboard" className="block btn-ghost text-sm" onClick={() => setMobileOpen(false)}>Dashboard</Link>
-                                    <button onClick={handleSignOut} className="block w-full text-left btn-ghost text-sm text-red-400">Salir</button>
+                                    <Link to="/#features" className="block btn-ghost text-sm" onClick={() => setMobileOpen(false)}>Características</Link>
+                                    <Link to="/pricing" className="block btn-ghost text-sm" onClick={() => setMobileOpen(false)}>Precios</Link>
+                                    <Link to="/#faq" className="block btn-ghost text-sm" onClick={() => setMobileOpen(false)}>FAQ</Link>
+                                    <Link to="/login" className="block btn-ghost text-sm" onClick={() => setMobileOpen(false)}>Iniciar Sesión</Link>
+                                    <Link to="/register" className="block btn-primary text-sm text-center" onClick={() => setMobileOpen(false)}>Comenzar Gratis</Link>
                                 </>
                             ) : (
                                 <>
-                                    <Link to="/login" className="block btn-ghost text-sm" onClick={() => setMobileOpen(false)}>Iniciar Sesión</Link>
-                                    <Link to="/register" className="block btn-primary text-sm text-center" onClick={() => setMobileOpen(false)}>Comenzar Gratis</Link>
+                                    <Link to="/dashboard" className="block btn-ghost text-sm" onClick={() => setMobileOpen(false)}>Dashboard</Link>
+                                    <button onClick={handleSignOut} className="block w-full text-left btn-ghost text-sm text-red-400">Salir</button>
                                 </>
                             )}
                         </div>

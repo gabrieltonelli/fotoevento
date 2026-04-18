@@ -6,6 +6,8 @@ import { Camera, Upload, X, Check, AlertTriangle, User, Image as ImageIcon } fro
 import { resizeImage } from '../utils/imageUtils';
 import toast from 'react-hot-toast';
 
+const MAX_PHOTOS_PER_UPLOAD = parseInt(import.meta.env.VITE_MAX_PHOTOS_PER_UPLOAD || '3', 10);
+
 export default function PhotoUpload() {
     const { shortCode } = useParams();
     const fileInput = useRef(null);
@@ -36,7 +38,22 @@ export default function PhotoUpload() {
             return;
         }
 
-        const newPhotos = validFiles.map(file => ({
+        // Count pending photos (not yet uploaded)
+        const pendingCount = photos.filter(p => p.status === 'pending').length;
+        const availableSlots = MAX_PHOTOS_PER_UPLOAD - pendingCount;
+
+        if (availableSlots <= 0) {
+            toast.error(`Máximo ${MAX_PHOTOS_PER_UPLOAD} fotos por envío`);
+            return;
+        }
+
+        let filesToAdd = validFiles;
+        if (validFiles.length > availableSlots) {
+            filesToAdd = validFiles.slice(0, availableSlots);
+            toast(`Se agregaron ${availableSlots} de ${validFiles.length} fotos (máx. ${MAX_PHOTOS_PER_UPLOAD} por envío)`, { icon: '⚠️' });
+        }
+
+        const newPhotos = filesToAdd.map(file => ({
             file,
             preview: URL.createObjectURL(file),
             status: 'pending', // pending | uploading | success | error
@@ -149,6 +166,7 @@ export default function PhotoUpload() {
                         {dragOver ? 'Soltá las fotos aquí' : 'Tocá para seleccionar fotos'}
                     </p>
                     <p className="text-white/40 text-sm">o arrastrá y soltá imágenes</p>
+                    <p className="text-white/30 text-xs mt-2">Máximo {MAX_PHOTOS_PER_UPLOAD} fotos por envío</p>
                 </div>
 
                 {/* Photo Previews */}

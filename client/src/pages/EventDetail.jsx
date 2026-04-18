@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 import { motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import {
     ArrowLeft, Monitor, QrCode, Copy, Download, Settings,
     Camera, Users, Calendar, MapPin, Share2, ExternalLink,
-    Trash2, Power, PowerOff, Image as ImageIcon
+    Trash2, Power, PowerOff, Image as ImageIcon, Loader2
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import toast from 'react-hot-toast';
@@ -15,35 +16,102 @@ export default function EventDetail() {
     const { id } = useParams();
     const { getToken } = useAuth();
     const navigate = useNavigate();
+    const qrRef = useRef(null);
 
-    // Demo data
-    const [event, setEvent] = useState({
-        id,
-        name: 'Boda de María y Juan',
-        type: 'wedding',
-        date: '2026-05-15',
-        location: 'Salón Los Olivos',
-        short_code: 'BODA2026',
-        is_active: true,
-        photo_count: 142,
-        guest_count: 85,
-        skin: 'classic-dark',
-        require_auth: false,
-        show_qr_on_screen: true,
-        dark_mode: true,
-        max_photos: 500,
-    });
-
+    const [event, setEvent] = useState(null);
     const [photos, setPhotos] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    // Fetch event data from API
+    useEffect(() => {
+        const loadEvent = async () => {
+            try {
+                const token = getToken();
+                const data = await api.getEvent(id, token);
+                setEvent(data.event);
+            } catch (err) {
+                console.error('Error loading event:', err);
+                toast.error('No se pudo cargar el evento');
+                navigate('/dashboard');
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadEvent();
+    }, [id, getToken, navigate]);
+
+    // Fetch photos
+    useEffect(() => {
+        if (!event) return;
+        const loadPhotos = async () => {
+            try {
+                const data = await api.getPhotos(event.id);
+                setPhotos(data.photos || []);
+            } catch (err) {
+                console.error('Error loading photos:', err);
+            }
+        };
+        loadPhotos();
+    }, [event]);
 
     const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-    const uploadUrl = `${appUrl}/e/${event.short_code}`;
-    const screenUrl = `${appUrl}/screen/${event.short_code}`;
+    const uploadUrl = event ? `${appUrl}/e/${event.short_code}` : '';
+    const screenUrl = event ? `${appUrl}/screen/${event.short_code}` : '';
 
     const copyToClipboard = (text, label) => {
         navigator.clipboard.writeText(text);
         toast.success(`${label} copiado al portapapeles`);
     };
+
+    const downloadQR = () => {
+        const svgElement = qrRef.current?.querySelector('svg');
+        if (!svgElement) return;
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const svgData = new XMLSerializer().serializeToString(svgElement);
+        const img = new Image();
+
+        // QR size with padding
+        const size = 400;
+        const padding = 40;
+        canvas.width = size + padding * 2;
+        canvas.height = size + padding * 2 + 60; // Extra for text
+
+        img.onload = () => {
+            // White background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw QR
+            ctx.drawImage(img, padding, padding, size, size);
+
+            // Draw short code text below
+            ctx.fillStyle = '#333333';
+            ctx.font = 'bold 24px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Código: ${event.short_code}`, canvas.width / 2, size + padding + 40);
+
+            // Download
+            const link = document.createElement('a');
+            link.download = `QR-${event.name}-${event.short_code}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            toast.success('QR descargado');
+        };
+
+        img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgData)))}`;
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-dark-950 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-primary-400 animate-spin" />
+            </div>
+        );
+    }
+
+    if (!event) return null;
 
     return (
         <div className="min-h-screen bg-dark-950">
@@ -76,10 +144,10 @@ export default function EventDetail() {
                                 <Monitor className="w-4 h-4" />
                                 Abrir Pantalla
                             </a>
-                            <button className="btn-secondary flex items-center gap-2 !text-sm">
-                                <Settings className="w-4 h-4" />
-                                Editar
-                            </button>
+                            <a href={uploadUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary flex items-center gap-2 !text-sm">
+                                <ExternalLink className="w-4 h-4" />
+                                Ver Upload
+                            </a>
                         </div>
                     </div>
                 </motion.div>
@@ -92,8 +160,8 @@ export default function EventDetail() {
                             <h3 className="font-display font-bold text-white mb-4">Estadísticas</h3>
                             <div className="space-y-4">
                                 {[
-                                    { label: 'Fotos', value: event.photo_count, max: event.max_photos, icon: ImageIcon, color: 'bg-primary-500' },
-                                    { label: 'Invitados', value: event.guest_count, icon: Users, color: 'bg-accent-500' },
+                                    { label: 'Fotos', value: photos.length, max: event.max_photos, icon: ImageIcon, color: 'bg-primary-500' },
+                                    { label: 'Plan', value: event.plan || 'free', icon: Users, color: 'bg-accent-500' },
                                 ].map(({ label, value, max, icon: Icon, color }) => (
                                     <div key={label}>
                                         <div className="flex items-center justify-between mb-1">
@@ -104,7 +172,7 @@ export default function EventDetail() {
                                         </div>
                                         {max && (
                                             <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                                                <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${(value / max) * 100}%` }} />
+                                                <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${Math.min((value / max) * 100, 100)}%` }} />
                                             </div>
                                         )}
                                     </div>
@@ -119,7 +187,7 @@ export default function EventDetail() {
                                 QR para Invitados
                             </h3>
 
-                            <div className="inline-block p-4 bg-white rounded-2xl mb-4">
+                            <div ref={qrRef} className="inline-block p-4 bg-white rounded-2xl mb-4">
                                 <QRCodeSVG value={uploadUrl} size={180} level="H" />
                             </div>
 
@@ -138,7 +206,7 @@ export default function EventDetail() {
                                     </button>
                                 </div>
 
-                                <button className="w-full btn-secondary flex items-center justify-center gap-2 !text-sm mt-2">
+                                <button onClick={downloadQR} className="w-full btn-secondary flex items-center justify-center gap-2 !text-sm mt-2">
                                     <Download className="w-4 h-4" />
                                     Descargar QR
                                 </button>
@@ -152,26 +220,29 @@ export default function EventDetail() {
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="font-display font-bold text-white flex items-center gap-2">
                                     <Camera className="w-5 h-5 text-primary-400" />
-                                    Fotos del Evento
+                                    Fotos del Evento ({photos.length})
                                 </h3>
-                                <button className="btn-secondary flex items-center gap-2 !text-sm">
-                                    <Download className="w-4 h-4" />
-                                    Descargar Todas
-                                </button>
                             </div>
 
-                            {event.photo_count === 0 ? (
+                            {photos.length === 0 ? (
                                 <div className="text-center py-16">
                                     <Camera className="w-16 h-16 text-white/10 mx-auto mb-4" />
                                     <p className="text-white/40">Aún no hay fotos. Compartí el QR con tus invitados.</p>
+                                    <p className="text-white/20 text-sm mt-2">Link: {uploadUrl}</p>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                    {/* Placeholder photo grid */}
-                                    {Array.from({ length: 9 }).map((_, i) => (
-                                        <div key={i} className="aspect-square rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] overflow-hidden group cursor-pointer">
-                                            <div className="w-full h-full flex items-center justify-center">
-                                                <ImageIcon className="w-8 h-8 text-white/10 group-hover:text-white/20 transition-colors" />
+                                    {photos.map((photo) => (
+                                        <div key={photo.id} className="aspect-square rounded-xl overflow-hidden group cursor-pointer relative">
+                                            <img
+                                                src={photo.url}
+                                                alt={`Foto de ${photo.guest_name}`}
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="absolute bottom-2 left-2 text-xs text-white/80">
+                                                    {photo.guest_name}
+                                                </div>
                                             </div>
                                         </div>
                                     ))}

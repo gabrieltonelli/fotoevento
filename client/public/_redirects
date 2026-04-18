@@ -1,5 +1,2 @@
-# Redirigir llamadas de API a la Netlify Function
-/api/*  /.netlify/functions/api/:splat  200
-
-# Soporte para Single Page Application (React Router)
+/api/*  /.netlify/functions/api/:splat  200!
 /*  /index.html  200

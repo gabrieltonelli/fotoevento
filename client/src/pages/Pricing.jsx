@@ -67,6 +67,8 @@ export default function Pricing() {
         }
     }, [searchParams]);
 
+    const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'annual'
+
     const handleCheckout = async (planId) => {
         if (!user) {
             toast('Necesitás iniciar sesión para comprar un plan', { icon: '🔐' });
@@ -85,6 +87,7 @@ export default function Pricing() {
             const result = await api.createCheckout({
                 plan: planId,
                 processor: selectedProcessor,
+                cycle: billingCycle // Pasar el ciclo al backend
             }, token);
 
             // Redirigir a la pasarela de pago
@@ -105,7 +108,7 @@ export default function Pricing() {
         {
             id: 'free',
             name: 'Gratuito',
-            price: '0',
+            price: { monthly: 0, annual: 0 },
             period: 'siempre',
             description: 'Probá Foto Eventos en tu próximo evento.',
             icon: Star,
@@ -126,8 +129,8 @@ export default function Pricing() {
         {
             id: 'pro',
             name: 'Pro',
-            price: '4.990',
-            period: 'por evento',
+            price: { monthly: 4990, annual: 3990 }, // ~20% desc
+            period: 'mes',
             description: 'Ideal para eventos medianos.',
             icon: Zap,
             gradient: 'from-primary-500 to-accent-500',
@@ -147,8 +150,8 @@ export default function Pricing() {
         {
             id: 'premium',
             name: 'Premium',
-            price: '9.990',
-            period: 'por evento',
+            price: { monthly: 9990, annual: 7990 }, // ~20% desc
+            period: 'mes',
             description: 'Para grandes eventos sin límites.',
             icon: Crown,
             gradient: 'from-amber-500 to-orange-500',
@@ -177,7 +180,7 @@ export default function Pricing() {
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="text-center mb-12"
+                        className="text-center mb-8"
                     >
                         <h1 className="section-title">Planes y Precios</h1>
                         <p className="section-subtitle">
@@ -185,12 +188,37 @@ export default function Pricing() {
                         </p>
                     </motion.div>
 
+                    {/* Billing Cycle Toggle */}
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="flex items-center justify-center gap-4 mb-12"
+                    >
+                        <span className={`text-sm font-medium ${billingCycle === 'monthly' ? 'text-white' : 'text-white/40'}`}>Mensual</span>
+                        <button 
+                            onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'annual' : 'monthly')}
+                            className="relative w-14 h-7 rounded-full bg-white/10 p-1 transition-colors hover:bg-white/20"
+                        >
+                            <motion.div 
+                                animate={{ x: billingCycle === 'monthly' ? 0 : 28 }}
+                                className="w-5 h-5 rounded-full bg-primary-500 shadow-lg shadow-primary-500/50"
+                            />
+                        </button>
+                        <div className="flex items-center gap-2">
+                            <span className={`text-sm font-medium ${billingCycle === 'annual' ? 'text-white' : 'text-white/40'}`}>Anual</span>
+                            <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-[10px] font-bold uppercase tracking-wider">
+                                Ahorrá 20%
+                            </span>
+                        </div>
+                    </motion.div>
+
                     {/* Payment Processor Selector */}
                     {processors.length > 1 && (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
+                            transition={{ delay: 0.2 }}
                             className="flex items-center justify-center mb-12"
                         >
                             <div className="glass rounded-2xl p-2 inline-flex items-center gap-1">
@@ -243,10 +271,24 @@ export default function Pricing() {
                                     <h3 className="font-display text-xl font-bold text-white">{plan.name}</h3>
                                     <p className="text-white/40 text-sm mt-1 mb-4">{plan.description}</p>
 
-                                    <div className="mb-6">
-                                        <span className="font-display text-4xl font-black text-white">${plan.price}</span>
+                                    <div className="mb-2">
+                                        <span className="font-display text-4xl font-black text-white">
+                                            ${plan.price[billingCycle].toLocaleString('es-AR')}
+                                        </span>
                                         <span className="text-white/40 text-sm ml-2">ARS / {plan.period}</span>
                                     </div>
+
+                                    {/* Savings indicator */}
+                                    {billingCycle === 'annual' && plan.price.monthly > 0 && (
+                                        <div className="mb-6">
+                                            <span className="text-green-400 text-xs font-semibold">
+                                                Ahorrás ${(plan.price.monthly - plan.price.annual).toLocaleString('es-AR')} por mes
+                                            </span>
+                                        </div>
+                                    )}
+                                    {billingCycle === 'monthly' && (
+                                        <div className="mb-6 h-4" /> // Spacer to keep heights even
+                                    )}
 
                                     {/* Features */}
                                     <ul className="space-y-3 mb-8 flex-1">

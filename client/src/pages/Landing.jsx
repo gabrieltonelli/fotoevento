@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import {
     Camera, Shield, Zap, Monitor, QrCode, Download,
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
+import { useAuth } from '../context/AuthContext';
 
 import backgroundImage from '../assets/images/bg1.png';
 
@@ -529,6 +530,17 @@ function Chatbot() {
 
 /* ─── Landing Page ─── */
 export default function Landing() {
+    const { user, loading } = useAuth();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!loading && user) {
+            navigate('/dashboard');
+        }
+    }, [user, loading, navigate]);
+
+    if (loading) return null;
+
     return (
         <div className="min-h-screen bg-dark-950">
             <Navbar />

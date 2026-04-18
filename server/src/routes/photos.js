@@ -5,6 +5,10 @@ import { optionalAuth } from '../middleware/auth.js';
 import { moderateImage } from '../services/moderation.js';
 
 const router = Router();
+
+// Helper: detect if a string is a valid UUID
+const isUUID = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
@@ -30,11 +34,13 @@ router.post('/:eventId/photos', optionalAuth, upload.single('photo'), async (req
         const guestName = req.body.guest_name || 'Anónimo';
 
         // Find event by ID or short_code
-        const { data: event, error: eventError } = await supabase
-            .from('events')
-            .select('*')
-            .or(`id.eq.${eventId},short_code.eq.${eventId}`)
-            .single();
+        let query = supabase.from('events').select('*');
+        if (isUUID(eventId)) {
+            query = query.or(`id.eq.${eventId},short_code.eq.${eventId}`);
+        } else {
+            query = query.eq('short_code', eventId);
+        }
+        const { data: event, error: eventError } = await query.single();
 
         if (eventError || !event) {
             return res.status(404).json({ message: 'Evento no encontrado' });
@@ -112,10 +118,13 @@ router.get('/:eventId/photos', async (req, res) => {
     try {
         const eventId = req.params.eventId;
 
-        const { data: photos, error } = await supabase
-            .from('photos')
-            .select('*')
-            .or(`event_id.eq.${eventId},event_short_code.eq.${eventId}`)
+        let query = supabase.from('photos').select('*');
+        if (isUUID(eventId)) {
+            query = query.or(`event_id.eq.${eventId},event_short_code.eq.${eventId}`);
+        } else {
+            query = query.eq('event_short_code', eventId);
+        }
+        const { data: photos, error } = await query
             .eq('status', 'approved')
             .order('created_at', { ascending: false });
 

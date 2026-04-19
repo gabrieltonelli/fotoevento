@@ -6,7 +6,8 @@ import { motion } from 'framer-motion';
 import {
     Plus, Calendar, Camera, Users, Settings, Trash2,
     QrCode, Monitor, BarChart3, Image as ImageIcon,
-    LogOut, ChevronRight, Eye, EyeOff, CheckCircle, Crown
+    LogOut, ChevronRight, Eye, EyeOff, CheckCircle, Crown,
+    ArrowUpCircle, Power
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import toast from 'react-hot-toast';
@@ -82,6 +83,20 @@ export default function Dashboard() {
         }
     };
 
+    const toggleEventActive = async (e, eventId, currentStatus) => {
+        e.stopPropagation(); // Evitar navegar al detalle
+        try {
+            const token = getToken();
+            await api.updateEvent(eventId, { is_active: !currentStatus }, token);
+            toast.success(`Evento ${!currentStatus ? 'activado' : 'desactivado'}`);
+            loadEvents();
+        } catch (err) {
+            toast.error('Error al actualizar el estado');
+        }
+    };
+
+    const hasPremium = events.some(e => e.plan === 'premium');
+
     const eventTypeEmoji = {
         wedding: '💍',
         birthday: '🎂',
@@ -136,6 +151,29 @@ export default function Dashboard() {
                         Nuevo Evento
                     </Link>
                 </div>
+
+                {/* Upgrade Plan Banner */}
+                {!hasPremium && events.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-primary-600/20 to-accent-600/20 border border-white/5 flex flex-col md:flex-row items-center justify-between gap-6"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-primary-500/20 flex items-center justify-center">
+                                <ArrowUpCircle className="w-8 h-8 text-primary-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-white">Pasate a Premium</h3>
+                                <p className="text-white/50 text-sm italic">Fotos ilimitadas, descarga completa y todos los skins exclusivos.</p>
+                            </div>
+                        </div>
+                        <Link to="/pricing" className="btn-primary flex items-center gap-2 w-full md:w-auto">
+                            <Crown className="w-4 h-4" />
+                            Mejorar Plan
+                        </Link>
+                    </motion.div>
+                )}
 
                 {/* Stats */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
@@ -204,10 +242,23 @@ export default function Dashboard() {
                                                 <p className="text-xs text-white/40">{eventTypeLabel[event.type] || event.type}</p>
                                             </div>
                                         </div>
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${event.is_active ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-white/40'
-                                            }`}>
-                                            {event.is_active ? 'Activo' : 'Inactivo'}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={(e) => toggleEventActive(e, event.id, event.is_active)}
+                                                className={`p-2 rounded-xl transition-all ${
+                                                    event.is_active 
+                                                        ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20' 
+                                                        : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
+                                                }`}
+                                                title={event.is_active ? 'Desactivar Evento' : 'Activar Evento'}
+                                            >
+                                                <Power className="w-4 h-4" />
+                                            </button>
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${event.is_active ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-white/40'
+                                                }`}>
+                                                {event.is_active ? 'Activo' : 'Inactivo'}
+                                            </span>
+                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-3 gap-3 mb-4">

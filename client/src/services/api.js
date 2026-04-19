@@ -69,8 +69,8 @@ export const api = {
         return response.json();
     },
 
-    getPhotos: (eventId) =>
-        fetchAPI(`/api/events/${eventId}/photos`),
+    getPhotos: (eventId, page = 1, limit = 24) =>
+        fetchAPI(`/api/events/${eventId}/photos?page=${page}&limit=${limit}`),
 
     // Payments
     getProcessors: () =>

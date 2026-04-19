@@ -2,15 +2,17 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import {
     ArrowLeft, Monitor, QrCode, Copy, Download, Settings,
     Camera, Users, Calendar, MapPin, Share2, ExternalLink,
-    Trash2, Power, PowerOff, Image as ImageIcon, Loader2
+    Trash2, Power, PowerOff, Image as ImageIcon, Loader2, X
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import toast from 'react-hot-toast';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 export default function EventDetail() {
     const { id } = useParams();
@@ -21,6 +23,11 @@ export default function EventDetail() {
     const [event, setEvent] = useState(null);
     const [photos, setPhotos] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 1 });
+    const [selectedPhoto, setSelectedPhoto] = useState(null);
+    const [isDownloadingAll, setIsDownloadingAll] = useState(false);
+
+    const pageSize = parseInt(import.meta.env.VITE_DASHBOARD_PAGE_SIZE || '24', 10);
 
     // Fetch event data from API
     useEffect(() => {
@@ -40,19 +47,64 @@ export default function EventDetail() {
         loadEvent();
     }, [id, getToken, navigate]);
 
-    // Fetch photos
+    // Fetch photos with pagination
     useEffect(() => {
         if (!event) return;
         const loadPhotos = async () => {
             try {
-                const data = await api.getPhotos(event.id);
+                const data = await api.getPhotos(event.id, pagination.page, pageSize);
                 setPhotos(data.photos || []);
+                setPagination(prev => ({
+                    ...prev,
+                    total: data.total,
+                    totalPages: data.totalPages
+                }));
             } catch (err) {
                 console.error('Error loading photos:', err);
             }
         };
         loadPhotos();
-    }, [event]);
+    }, [event, pagination.page, pageSize]);
+
+    const handleDownloadAll = async () => {
+        if (photos.length === 0) return;
+        setIsDownloadingAll(true);
+        const zip = new JSZip();
+        
+        try {
+            toast.loading('Generando archivo ZIP...', { id: 'zip-toast' });
+            
+            const promises = photos.map(async (photo, index) => {
+                const response = await fetch(photo.url);
+                const blob = await response.blob();
+                const extension = photo.url.split('.').pop().split('?')[0] || 'jpg';
+                const filename = `${photo.guest_name}-${index + 1}.${extension}`;
+                zip.file(filename, blob);
+            });
+
+            await Promise.all(promises);
+            const content = await zip.generateAsync({ type: 'blob' });
+            saveAs(content, `fotos-${event.name}-${event.short_code}.zip`);
+            
+            toast.success('¡ZIP generado exitosamente!', { id: 'zip-toast' });
+        } catch (err) {
+            console.error('Error generating ZIP:', err);
+            toast.error('Error al generar el ZIP', { id: 'zip-toast' });
+        } finally {
+            setIsDownloadingAll(false);
+        }
+    };
+
+    const downloadSingle = async (e, photo) => {
+        e.stopPropagation();
+        try {
+            const response = await fetch(photo.url);
+            const blob = await response.blob();
+            saveAs(blob, `foto-${photo.guest_name}-${Date.now()}.jpg`);
+        } catch (err) {
+            toast.error('Error al descargar la foto');
+        }
+    };
 
     const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
     const uploadUrl = event ? `${appUrl}/e/${event.short_code}` : '';
@@ -160,7 +212,7 @@ export default function EventDetail() {
                             <h3 className="font-display font-bold text-white mb-4">Estadísticas</h3>
                             <div className="space-y-4">
                                 {[
-                                    { label: 'Fotos', value: photos.length, max: event.max_photos, icon: ImageIcon, color: 'bg-primary-500' },
+                                    { label: 'Fotos', value: pagination.total, max: event.max_photos, icon: ImageIcon, color: 'bg-primary-500' },
                                     { label: 'Plan', value: event.plan || 'free', icon: Users, color: 'bg-accent-500' },
                                 ].map(({ label, value, max, icon: Icon, color }) => (
                                     <div key={label}>
@@ -217,11 +269,26 @@ export default function EventDetail() {
                     {/* Photos Grid */}
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="lg:col-span-2">
                         <div className="glass rounded-2xl p-6">
-                            <div className="flex items-center justify-between mb-6">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                                 <h3 className="font-display font-bold text-white flex items-center gap-2">
                                     <Camera className="w-5 h-5 text-primary-400" />
-                                    Fotos del Evento ({photos.length})
+                                    Fotos del Evento ({pagination.total})
                                 </h3>
+                                
+                                {photos.length > 0 && (
+                                    <button 
+                                        onClick={handleDownloadAll}
+                                        disabled={isDownloadingAll}
+                                        className="btn-secondary flex items-center gap-2 !text-xs !py-2"
+                                    >
+                                        {isDownloadingAll ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <Download className="w-4 h-4" />
+                                        )}
+                                        Descargar Todas (Página {pagination.page})
+                                    </button>
+                                )}
                             </div>
 
                             {photos.length === 0 ? (
@@ -231,27 +298,108 @@ export default function EventDetail() {
                                     <p className="text-white/20 text-sm mt-2">Link: {uploadUrl}</p>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                    {photos.map((photo) => (
-                                        <div key={photo.id} className="aspect-square rounded-xl overflow-hidden group cursor-pointer relative">
-                                            <img
-                                                src={photo.url}
-                                                alt={`Foto de ${photo.guest_name}`}
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <div className="absolute bottom-2 left-2 text-xs text-white/80">
-                                                    {photo.guest_name}
+                                <>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                        {photos.map((photo) => (
+                                            <div 
+                                                key={photo.id} 
+                                                className="aspect-square rounded-xl overflow-hidden group cursor-pointer relative"
+                                                onClick={() => setSelectedPhoto(photo)}
+                                            >
+                                                <img
+                                                    src={photo.url}
+                                                    alt={`Foto de ${photo.guest_name}`}
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="absolute top-2 right-2">
+                                                        <button 
+                                                            onClick={(e) => downloadSingle(e, photo)}
+                                                            className="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                    <div className="absolute bottom-2 left-2 text-xs text-white/80 font-medium bg-black/40 px-2 py-1 rounded-md">
+                                                        {photo.guest_name}
+                                                    </div>
                                                 </div>
                                             </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Pagination Controls */}
+                                    {pagination.totalPages > 1 && (
+                                        <div className="flex items-center justify-center gap-4 mt-8">
+                                            <button
+                                                disabled={pagination.page === 1}
+                                                onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                                                className="btn-ghost !p-2 disabled:opacity-30"
+                                            >
+                                                <ArrowLeft className="w-5 h-5" />
+                                            </button>
+                                            <span className="text-sm text-white/60">
+                                                Página <span className="text-white font-bold">{pagination.page}</span> de {pagination.totalPages}
+                                            </span>
+                                            <button
+                                                disabled={pagination.page === pagination.totalPages}
+                                                onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                                                className="btn-ghost !p-2 disabled:opacity-30 flex rotate-180"
+                                            >
+                                                <ArrowLeft className="w-5 h-5" />
+                                            </button>
                                         </div>
-                                    ))}
-                                </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </motion.div>
                 </div>
             </main>
+
+            {/* Zoom Modal */}
+            <AnimatePresence>
+                {selectedPhoto && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedPhoto(null)}
+                            className="absolute inset-0 bg-black/90 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center"
+                        >
+                            <img
+                                src={selectedPhoto.url}
+                                alt="Zoomed"
+                                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                            />
+                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 glass px-4 py-2 rounded-full text-white text-sm flex items-center gap-4">
+                                <span className="font-bold">{selectedPhoto.guest_name}</span>
+                                <div className="w-px h-4 bg-white/20" />
+                                <button 
+                                    onClick={(e) => downloadSingle(e, selectedPhoto)}
+                                    className="hover:text-primary-400 transition-colors flex items-center gap-1"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    Descargar
+                                </button>
+                            </div>
+                            <button
+                                onClick={() => setSelectedPhoto(null)}
+                                className="absolute -top-12 right-0 text-white/60 hover:text-white transition-colors"
+                            >
+                                <X className="w-8 h-8" />
+                            </button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

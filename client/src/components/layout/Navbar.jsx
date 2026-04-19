@@ -10,8 +10,9 @@ export default function Navbar() {
     const navigate = useNavigate();
 
     const handleSignOut = async () => {
+        // Navegamos primero para evitar que ProtectedRoute nos mande al /login
+        navigate('/', { replace: true });
         await signOut();
-        navigate('/');
     };
 
     return (

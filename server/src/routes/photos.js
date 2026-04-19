@@ -50,6 +50,19 @@ router.post('/:eventId/photos', optionalAuth, upload.single('photo'), async (req
             return res.status(403).json({ message: 'Este evento no está activo' });
         }
 
+        // Check photo limit
+        const { count: currentPhotos } = await supabase
+            .from('photos')
+            .select('*', { count: 'exact', head: true })
+            .eq('event_id', event.id)
+            .eq('status', 'approved');
+
+        if (currentPhotos >= event.max_photos) {
+            return res.status(403).json({ 
+                message: `Límite de fotos alcanzado (${event.max_photos}). Mejorá tu plan para recibir más.` 
+            });
+        }
+
         // Check auth requirement
         if (event.require_auth && !req.user) {
             return res.status(401).json({ message: 'Este evento requiere registro para subir fotos' });
@@ -137,20 +150,29 @@ router.post('/:eventId/photos', optionalAuth, upload.single('photo'), async (req
 router.get('/:eventId/photos', async (req, res) => {
     try {
         const eventId = req.params.eventId;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 24;
+        const offset = (page - 1) * limit;
 
-        let query = supabase.from('photos').select('*');
+        let query = supabase.from('photos').select('*', { count: 'exact' });
         if (isUUID(eventId)) {
             query = query.or(`event_id.eq.${eventId},event_short_code.eq.${eventId}`);
         } else {
             query = query.eq('event_short_code', eventId);
         }
-        const { data: photos, error } = await query
+        const { data: photos, error, count } = await query
             .eq('status', 'approved')
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1);
 
         if (error) throw error;
 
-        res.json({ photos: photos || [] });
+        res.json({ 
+            photos: photos || [],
+            total: count,
+            page,
+            totalPages: Math.ceil(count / limit)
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

@@ -40,8 +40,8 @@ export default function Register() {
         if (error) {
             toast.error(error.message);
         } else {
-            toast.success('¡Cuenta creada! Revisá tu email para confirmar.');
-            navigate('/dashboard');
+            toast.success('¡Iniciando tu experiencia! Seleccioná un plan para continuar.');
+            navigate('/pricing?from=register');
         }
     };
 

@@ -328,7 +328,9 @@ export async function createMPSubscription({ plan, eventId, userId, userEmail })
         };
     } catch (error) {
         console.error("Error creando suscripción en MP:", error);
-        throw new Error("No se pudo iniciar el proceso de suscripción");
+        // Bubble up the specific MP error message if available
+        const mpErrorMsg = error.message || (error.response?.data?.message) || "No se pudo iniciar el proceso de suscripción";
+        throw new Error(mpErrorMsg);
     }
 }
 

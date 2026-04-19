@@ -287,22 +287,31 @@ export async function handleStripeWebhook(rawBody, signature) {
 // ═══════════════════════════════════════
 // MERCADO PAGO (Subscriptions / PreApproval)
 // ═══════════════════════════════════════
-export async function createMPSubscription({ plan, eventId, userId, userEmail }) {
+export async function createMPSubscription({ plan, eventId, userId, userEmail, cycle }) {
     if (!mpClient) throw new Error('MercadoPago no está configurado');
     
     const preApproval = new PreApproval(mpClient);
     const selectedPlan = PLANS[plan];
     
-    // Obtener el ID del plan de MP desde las variables de entorno
-    const mpPlanId = plan === 'pro' 
-        ? process.env.VITE_MP_PLAN_PRO_ID 
-        : process.env.VITE_MP_PLAN_PREMIUM_ID;
+    const appUrl = process.env.VITE_APP_URL || 'http://localhost:5173';
+    
+    // Obtener el ciclo y el ID correspondiente
+    const currentCycle = cycle || 'monthly';
+    let mpPlanId = null;
 
-    if (!mpPlanId) {
-        throw new Error(`ID de plan de Mercado Pago no configurado para el plan "${plan}"`);
+    if (plan === 'pro') {
+        mpPlanId = currentCycle === 'annual' 
+            ? process.env.VITE_MP_PLAN_PRO_ANNUAL_ID 
+            : process.env.VITE_MP_PLAN_PRO_ID;
+    } else if (plan === 'premium') {
+        mpPlanId = currentCycle === 'annual' 
+            ? process.env.VITE_MP_PLAN_PREMIUM_ANNUAL_ID 
+            : process.env.VITE_MP_PLAN_PREMIUM_ID;
     }
 
-    const appUrl = process.env.VITE_APP_URL || 'http://localhost:5173';
+    if (!mpPlanId) {
+        throw new Error(`ID de plan de Mercado Pago no configurado para el plan "${plan}" (${currentCycle})`);
+    }
 
     try {
         const result = await preApproval.create({
@@ -334,9 +343,9 @@ export async function createMPSubscription({ plan, eventId, userId, userEmail })
     }
 }
 
-export async function createMPCheckout({ plan, eventId, userId, userEmail }) {
+export async function createMPCheckout({ plan, eventId, userId, userEmail, cycle }) {
     // Si queremos que TODO en MP sea suscripción, redirigimos a createMPSubscription
-    return createMPSubscription({ plan, eventId, userId, userEmail });
+    return createMPSubscription({ plan, eventId, userId, userEmail, cycle });
 }
 
 export async function handleMPWebhook(query, body) {
@@ -395,7 +404,7 @@ export async function createCheckout({ plan, eventId, userId, userEmail, process
         case 'stripe':
             return createStripeCheckout({ plan, eventId, userId });
         case 'mercadopago':
-            return createMPCheckout({ plan, eventId, userId, userEmail });
+            return createMPCheckout({ plan, eventId, userId, userEmail, cycle });
         default:
             throw new Error(`Procesador "${chosenProcessor}" no soportado`);
     }

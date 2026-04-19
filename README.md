@@ -203,6 +203,8 @@ Esto inicia:
 - Habilitado dinámicamente según `PAYMENT_PROCESSORS` en `.env`
 - Checkout real con redirect a la pasarela seleccionada
 - Activación automática del plan al volver del pago exitoso
+- **Sistema de Pruebas Gratuitas**: Configurable por cuenta (`FREE_TRIAL_LIMIT`), con tracking en DB y bloqueo automático al agotar intentos.
+- **Facturación Flexible**: Soporte para ciclos mensuales y anuales con descuentos configurables.
 
 ---
 

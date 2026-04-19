@@ -1,24 +1,10 @@
 https://www.instagram.com/reel/DUtOfFMDpsG/
 
-al hacer logout deberia ir al home y no al login.
-
-Agregar la opcion de podert hacer upgrade del plan en el dashboard, salvo que sea el plan mas grande, en cuyo caso no deberia mostrarse.
-
-boton de descargar fotos en el dashboard
-
-poder apliar foto en el dashboard
-
-opcion para descargar de a una
-
-desactivar evento desde el dashboard
-
-Paginar de a N con variable de entorno, las fotos en el evento del usuario (dashboard). Paginar del lado del cliente con react-query y del lado del servidor con supabase.
-
-Chequear que este funcionando el limite de fotos por plan. Al crear no deberia darse la opcion de definir cuantas fotos se pueden subir, sino que deberia estar predefinido por el plan. 
-
 
 Durante la creacion de la cuenta luego del form de registro deberia pasar a elegir el plan y posterior a eso seleccionar el procesador de pago (mercadolibre o stripe) y lo tipico de seleccionar forma de pago etc.
 si no se detecta el pago, no deberia habilitarse el dashboard, salvo que haya elegido la version gratuita. Siempre verificar que el pago se haya realizado correctamente y que la suscripción no esté caducada.
+
+quitar la moderacion por IA del plan gratuito y agregar que caduca en N minutos (por defecto 30) y luego de ese periodo no se puede subir mas fotos ni crear eventos. Pero si se puede seguir viendo las fotos que se subieron.
 
 enviar avisos por email cuando una suscripción esté por vencer (N dias antes por variable de entorno) y cuando haya vencido.
 

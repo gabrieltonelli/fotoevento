@@ -95,6 +95,22 @@ export const api = {
             headers: { Authorization: `Bearer ${token}` },
         }),
 
+    getPayments: (token) =>
+        fetchAPI('/api/payments', {
+            headers: { Authorization: `Bearer ${token}` },
+        }),
+
+    activateFreePlan: (token) =>
+        fetchAPI('/api/payments/activate-free', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+        }),
+
+    getProfile: (token) =>
+        fetchAPI('/api/profile', {
+            headers: { Authorization: `Bearer ${token}` },
+        }),
+
     // Public event info
     getPublicEvent: (shortCode) =>
         fetchAPI(`/api/public/event/${shortCode}`),

@@ -13,7 +13,7 @@ import Navbar from '../components/layout/Navbar';
 import toast from 'react-hot-toast';
 
 export default function Dashboard() {
-    const { user, signOut, getToken } = useAuth();
+    const { user, profile, signOut, getToken, isTrialExpired } = useAuth();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [events, setEvents] = useState([]);
@@ -120,6 +120,28 @@ export default function Dashboard() {
             <Navbar />
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">
+                {/* Trial Expired Warning */}
+                {profile?.subscription_plan === 'free' && isTrialExpired() && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="mb-8 p-6 rounded-2xl bg-red-500/10 border border-red-500/30 flex flex-col md:flex-row items-center justify-between gap-6"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                                <Clock className="w-6 h-6 text-red-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-white">Tu período de prueba ha vencido</h3>
+                                <p className="text-red-400/70 text-sm">Tus eventos han sido desactivados. Mejorá tu plan para seguir capturando momentos vivos.</p>
+                            </div>
+                        </div>
+                        <Link to="/pricing" className="btn-primary !bg-red-500 !hover:bg-red-600 !border-none whitespace-nowrap">
+                            Mejorar Plan Ahora
+                        </Link>
+                    </motion.div>
+                )}
+
                 {/* Payment Success Banner */}
                 {paymentSuccess && (
                     <motion.div

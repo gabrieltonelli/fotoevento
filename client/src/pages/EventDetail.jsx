@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -17,7 +17,7 @@ import { saveAs } from 'file-saver';
 
 export default function EventDetail() {
     const { id } = useParams();
-    const { getToken } = useAuth();
+    const { getToken, isTrialExpired, refreshProfile } = useAuth();
     const navigate = useNavigate();
     const qrRef = useRef(null);
 
@@ -33,8 +33,9 @@ export default function EventDetail() {
 
     const pageSize = parseInt(import.meta.env.VITE_DASHBOARD_PAGE_SIZE || '24', 10);
 
-    const loadEvent = async () => {
+    const loadEvent = useCallback(async () => {
         try {
+            await refreshProfile();
             const token = getToken();
             const data = await api.getEvent(id, token);
             setEvent(data.event);
@@ -50,7 +51,7 @@ export default function EventDetail() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id, getToken, navigate, refreshProfile]);
 
     // Fetch event data from API
     useEffect(() => {
@@ -96,14 +97,22 @@ export default function EventDetail() {
         loadPhotos();
     }, [event, pagination.page, pageSize]);
 
-    const handleDownloadAll = async () => {
+    const handleDownloadAll = useCallback(async () => {
+        if (isTrialExpired()) {
+            toast.error('Tu tiempo de prueba gratuito ha expirado. Mejorá tu plan para descargar todas las fotos.', {
+                duration: 5000,
+                icon: '⏳'
+            });
+            navigate('/pricing');
+            return;
+        }
+
         setIsDownloadingAll(true);
         const zip = new JSZip();
 
         try {
             toast.loading('Obteniendo lista completa de fotos...', { id: 'zip-toast' });
 
-            // 1. Obtener todas las fotos del evento (sin paginación de la UI)
             const allPhotosData = await api.getPhotos(event.id, 1, 10000);
             const allPhotos = allPhotosData.photos || [];
 
@@ -114,7 +123,6 @@ export default function EventDetail() {
 
             toast.loading(`Descargando ${allPhotos.length} fotos...`, { id: 'zip-toast' });
 
-            // 2. Descargar y agregar al ZIP
             const promises = allPhotos.map(async (photo, index) => {
                 try {
                     const response = await fetch(photo.url);
@@ -140,10 +148,17 @@ export default function EventDetail() {
         } finally {
             setIsDownloadingAll(false);
         }
-    };
+    }, [event, isTrialExpired, navigate]);
 
-    const downloadSingle = async (e, photo) => {
+    const downloadSingle = useCallback(async (e, photo) => {
         e.stopPropagation();
+
+        if (isTrialExpired()) {
+            toast.error('Sesión expirada. Mejorá tu plan para descargar fotos.', { icon: '⏳' });
+            navigate('/pricing');
+            return;
+        }
+
         try {
             const response = await fetch(photo.url);
             const blob = await response.blob();
@@ -151,7 +166,7 @@ export default function EventDetail() {
         } catch (err) {
             toast.error('Error al descargar la foto');
         }
-    };
+    }, [isTrialExpired, navigate]);
 
     const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
     const uploadUrl = event ? `${appUrl}/e/${event.short_code}` : '';
@@ -282,7 +297,7 @@ export default function EventDetail() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 pt-2">
-                                        <button 
+                                        <button
                                             onClick={handleUpdateEvent}
                                             disabled={isUpdating}
                                             className="btn-primary !py-2 !text-xs flex items-center gap-2"
@@ -290,7 +305,7 @@ export default function EventDetail() {
                                             {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                                             Guardar Cambios
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={() => setIsEditing(false)}
                                             className="btn-ghost !py-2 !text-xs flex items-center gap-2"
                                         >
@@ -307,7 +322,7 @@ export default function EventDetail() {
                                             }`}>
                                             {event.is_active ? '● Activo' : '○ Inactivo'}
                                         </span>
-                                        <button 
+                                        <button
                                             onClick={() => setIsEditing(true)}
                                             className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-all ml-2"
                                             title="Editar datos del evento"
@@ -460,14 +475,18 @@ export default function EventDetail() {
                                     <button
                                         onClick={handleDownloadAll}
                                         disabled={isDownloadingAll}
-                                        className="btn-secondary flex items-center gap-2 !text-xs !py-2"
+                                        className={`btn-secondary flex items-center gap-2 !text-xs !py-2 ${isTrialExpired() ? '!bg-amber-500/10 !text-amber-500 !border-amber-500/50 hover:!bg-amber-500/20' : ''
+                                            }`}
+                                        title={isTrialExpired() ? 'Requiere plan PRO o superior' : 'Descargar todas las fotos'}
                                     >
                                         {isDownloadingAll ? (
                                             <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : isTrialExpired() ? (
+                                            <Crown className="w-4 h-4" />
                                         ) : (
                                             <Download className="w-4 h-4" />
                                         )}
-                                        Descargar todas
+                                        {isTrialExpired() ? 'Mejorar para plan para Descargar Todas' : 'Descargar todas'}
                                     </button>
                                 )}
                             </div>
@@ -496,9 +515,11 @@ export default function EventDetail() {
                                                     <div className="absolute top-2 right-2">
                                                         <button
                                                             onClick={(e) => downloadSingle(e, photo)}
-                                                            className="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
+                                                            className={`p-2 rounded-lg text-white transition-colors ${isTrialExpired() ? 'bg-amber-500/90 hover:bg-amber-600' : 'bg-white/10 hover:bg-white/20'
+                                                                }`}
+                                                            title={isTrialExpired() ? 'Mejorar plan para descargar' : 'Descargar foto'}
                                                         >
-                                                            <Download className="w-4 h-4" />
+                                                            {isTrialExpired() ? <Crown className="w-4 h-4" /> : <Download className="w-4 h-4" />}
                                                         </button>
                                                     </div>
                                                     <div className="absolute bottom-2 left-2 text-xs text-white/80 font-medium bg-black/40 px-2 py-1 rounded-md">
@@ -565,10 +586,12 @@ export default function EventDetail() {
                                 <div className="w-px h-4 bg-white/20" />
                                 <button
                                     onClick={(e) => downloadSingle(e, selectedPhoto)}
-                                    className="hover:text-primary-400 transition-colors flex items-center gap-1"
+                                    className={`transition-colors flex items-center gap-1 ${isTrialExpired() ? 'text-amber-500 font-bold hover:text-amber-400' : 'hover:text-primary-400'
+                                        }`}
+                                    title={isTrialExpired() ? 'Mejorar plan para descargar' : 'Descargar'}
                                 >
-                                    <Download className="w-4 h-4" />
-                                    Descargar
+                                    {isTrialExpired() ? <Crown className="w-4 h-4" /> : <Download className="w-4 h-4" />}
+                                    {isTrialExpired() ? 'Mejorar para plan para Descargar' : 'Descargar'}
                                 </button>
                             </div>
                             <button

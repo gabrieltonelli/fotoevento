@@ -9,9 +9,11 @@ import CreateEvent from './pages/CreateEvent';
 import PhotoUpload from './pages/PhotoUpload';
 import EventScreen from './pages/EventScreen';
 import Pricing from './pages/Pricing';
+import Billing from './pages/Billing';
 
 function ProtectedRoute({ children }) {
-    const { user, loading } = useAuth();
+    const { user, profile, loading, isDevMode } = useAuth();
+    
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-dark-950">
@@ -19,7 +21,15 @@ function ProtectedRoute({ children }) {
             </div>
         );
     }
-    return user ? children : <Navigate to="/login" />;
+
+    if (!user) return <Navigate to="/login" />;
+
+    // Si no tiene plan y no estamos en dev mode, obligar a elegir uno
+    if (!isDevMode && (!profile || profile.subscription_plan === 'none' || profile.subscription_status === 'inactive')) {
+        return <Navigate to="/pricing?from=guard" />;
+    }
+
+    return children;
 }
 
 export default function App() {
@@ -29,6 +39,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/events/new" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
             <Route path="/events/:id" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />

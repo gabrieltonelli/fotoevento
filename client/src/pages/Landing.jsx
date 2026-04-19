@@ -428,7 +428,7 @@ function Chatbot() {
     const messagesEnd = useRef(null);
 
     const botResponses = {
-        precio: '¡Tenemos planes depuis $0/mes! El plan gratuito incluye 1 evento con hasta 50 fotos. Visitá /pricing para ver todos los planes.',
+        precio: `¡Tenemos planes desde $0/mes! El plan gratuito incluye 1 evento con hasta ${import.meta.env.VITE_PLAN_FREE_MAX_PHOTOS || '50'} fotos. Visitá /pricing para ver todos los planes.`,
         funciona: 'Es muy simple: 1) Creás tu evento 2) Compartís el QR 3) Los invitados suben fotos 4) Se proyectan en vivo. ¡La IA modera todo automáticamente!',
         registro: 'Es opcional según la config del evento. El organizador decide si los invitados deben registrarse o pueden subir fotos como anónimos.',
         segur: 'Las fotos son moderadas por IA antes de mostrarse. Contenido inapropiado es rechazado automáticamente.',

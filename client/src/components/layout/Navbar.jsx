@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useState } from 'react';
-import { Camera, Menu, X, LogOut, LayoutDashboard } from 'lucide-react';
+import { Camera, Menu, X, LogOut, LayoutDashboard, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Navbar() {
@@ -47,6 +47,10 @@ export default function Navbar() {
                                 <Link to="/dashboard" className="flex items-center gap-2 btn-ghost text-sm">
                                     <LayoutDashboard className="w-4 h-4" />
                                     Dashboard
+                                </Link>
+                                <Link to="/billing" className="flex items-center gap-2 btn-ghost text-sm">
+                                    <CreditCard className="w-4 h-4" />
+                                    Facturación
                                 </Link>
                                 <button onClick={handleSignOut} className="flex items-center gap-2 btn-ghost text-sm text-red-400 hover:text-red-300">
                                     <LogOut className="w-4 h-4" />

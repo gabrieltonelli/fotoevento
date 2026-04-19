@@ -9,7 +9,7 @@
  */
 
 import Stripe from 'stripe';
-import { MercadoPagoConfig, Preference, Payment as MPPayment } from 'mercadopago';
+import { MercadoPagoConfig, Preference, Payment as MPPayment, PreApproval } from 'mercadopago';
 import { supabase } from './supabase.js';
 
 // ─── Planes ───
@@ -18,27 +18,27 @@ export const PLANS = {
         name: 'Gratuito',
         price: 0,
         currency: 'ARS',
-        max_photos: 50,
+        max_photos: parseInt(process.env.VITE_PLAN_FREE_MAX_PHOTOS || '50'),
         max_events: 1,
-        features: '1 evento, hasta 50 fotos',
+        features: `1 evento, hasta ${process.env.VITE_PLAN_FREE_MAX_PHOTOS || '50'} fotos, duración ${process.env.FREE_TRIAL_MINUTES || '30'} mins`,
         skins: ['classic-dark', 'classic-light'],
         watermark: true,
         download: false,
     },
     pro: {
         name: 'Pro',
-        price: 4990,
+        price: parseInt(process.env.VITE_PLAN_PRO_PRICE || '4990'),
         currency: 'ARS',
-        max_photos: 500,
+        max_photos: parseInt(process.env.VITE_PLAN_PRO_MAX_PHOTOS || '500'),
         max_events: -1, // ilimitados
-        features: 'Hasta 500 fotos, skins premium, descarga de fotos',
+        features: `Hasta ${process.env.VITE_PLAN_PRO_MAX_PHOTOS || '500'} fotos, skins premium, descarga de fotos`,
         skins: ['classic-dark', 'classic-light', 'elegant-gold', 'neon'],
         watermark: false,
         download: true,
     },
     premium: {
         name: 'Premium',
-        price: 9990,
+        price: parseInt(process.env.VITE_PLAN_PREMIUM_PRICE || '9990'),
         currency: 'ARS',
         max_photos: -1, // ilimitadas
         max_events: -1,
@@ -104,22 +104,73 @@ export async function activatePlan({ plan, userId, eventId, paymentId, processor
     }
 
     try {
-        // Si hay eventId específico, actualizar ese evento
+        const expiryDate = new Date();
+        const trialMinutes = parseInt(process.env.FREE_TRIAL_MINUTES || '30');
+
+        if (plan === 'free') {
+            expiryDate.setMinutes(expiryDate.getMinutes() + trialMinutes);
+        } else {
+            expiryDate.setDate(expiryDate.getDate() + 30); // Paid plans default to 30 days
+        }
+
+        // 1. Obtener perfil actual para verificar trial (si es plan free)
+        if (plan === 'free') {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('trial_used')
+                .eq('id', userId)
+                .single();
+            
+            if (profile?.trial_used) {
+                console.warn(`Usuario ${userId} ya utilizó su plan gratuito.`);
+                return false;
+            }
+        }
+
+        // 2. Actualizar el perfil del usuario
+        const profileUpdates = {
+            subscription_plan: plan,
+            subscription_status: 'active',
+            subscription_expiry: expiryDate.toISOString(),
+        };
+
+        if (plan === 'free') {
+            profileUpdates.trial_used = true;
+            profileUpdates.trial_expires_at = expiryDate.toISOString();
+        }
+
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .update(profileUpdates)
+            .eq('id', userId);
+
+        if (profileError) {
+            console.error('Error al actualizar perfil:', profileError);
+            // Fallback upsert
+            await supabase.from('profiles').upsert({
+                id: userId,
+                ...profileUpdates,
+            });
+        }
+
+        // 3. Si hay eventId específico, actualizar ese evento
         if (eventId) {
-            const { error } = await supabase
+            const { error: eventError } = await supabase
                 .from('events')
                 .update({
                     plan,
                     max_photos: planInfo.max_photos === -1 ? 999999 : planInfo.max_photos,
                     is_active: true,
+                    // Si es free, el evento también hereda la expiración para el bloqueo de fotos
+                    updated_at: new Date().toISOString() 
                 })
                 .eq('id', eventId)
                 .eq('user_id', userId);
 
-            if (error) throw error;
+            if (eventError) throw eventError;
         }
 
-        // Registrar pago en la tabla payments
+        // 4. Registrar pago en la tabla payments
         await supabase.from('payments').insert({
             user_id: userId,
             event_id: eventId || null,
@@ -131,7 +182,7 @@ export async function activatePlan({ plan, userId, eventId, paymentId, processor
             status: 'completed',
         });
 
-        console.log(`✅ Plan "${plan}" activado exitosamente`);
+        console.log(`✅ Plan "${plan}" activado exitosamente (Vence: ${expiryDate.toLocaleString()})`);
         return true;
     } catch (err) {
         console.error('Error al activar plan:', err);
@@ -209,56 +260,56 @@ export async function handleStripeWebhook(rawBody, signature) {
 }
 
 // ═══════════════════════════════════════
-// MERCADO PAGO
+// MERCADO PAGO (Subscriptions / PreApproval)
 // ═══════════════════════════════════════
-export async function createMPCheckout({ plan, eventId, userId }) {
-    if (!mpPreference) throw new Error('MercadoPago no está configurado');
-
+export async function createMPSubscription({ plan, eventId, userId, userEmail }) {
+    if (!mpClient) throw new Error('MercadoPago no está configurado');
+    
+    const preApproval = new PreApproval(mpClient);
     const selectedPlan = PLANS[plan];
-    if (!selectedPlan || selectedPlan.price === 0) {
-        throw new Error('Plan no válido para pago');
+    
+    // Obtener el ID del plan de MP desde las variables de entorno
+    const mpPlanId = plan === 'pro' 
+        ? process.env.VITE_MP_PLAN_PRO_ID 
+        : process.env.VITE_MP_PLAN_PREMIUM_ID;
+
+    if (!mpPlanId) {
+        throw new Error(`ID de plan de Mercado Pago no configurado para el plan "${plan}"`);
     }
 
     const appUrl = process.env.VITE_APP_URL || 'http://localhost:5173';
-    const apiUrl = process.env.VITE_API_URL || 'http://localhost:3001';
 
-    const preference = await mpPreference.create({
-        body: {
-            items: [
-                {
-                    id: `fotoevento-${plan}`,
-                    title: `Foto Eventos ${selectedPlan.name}`,
-                    description: selectedPlan.features,
-                    quantity: 1,
-                    unit_price: selectedPlan.price,
-                    currency_id: 'ARS',
-                },
-            ],
-            payer: {
-                // Se puede completar con datos del usuario si los tenemos
-            },
-            back_urls: {
-                success: `${appUrl}/dashboard?payment=success&plan=${plan}&event=${eventId || ''}&processor=mercadopago`,
-                failure: `${appUrl}/pricing?payment=failed`,
-                pending: `${appUrl}/dashboard?payment=pending&plan=${plan}`,
-            },
-            auto_return: 'approved',
-            notification_url: `${apiUrl}/api/payments/webhook/mercadopago`,
-            external_reference: JSON.stringify({
-                plan,
-                event_id: eventId || '',
-                user_id: userId,
-            }),
-            statement_descriptor: 'FOTOEVENTO',
-        },
-    });
+    try {
+        const result = await preApproval.create({
+            body: {
+                preapproval_plan_id: mpPlanId,
+                reason: `Foto Eventos - Plan ${selectedPlan.name}`,
+                external_reference: JSON.stringify({
+                    plan,
+                    event_id: eventId || '',
+                    user_id: userId,
+                }),
+                payer_email: userEmail,
+                back_url: `${appUrl}/dashboard?payment=success&plan=${plan}&event=${eventId || ''}&processor=mercadopago`,
+                status: "pending"
+            }
+        });
 
-    return {
-        url: preference.init_point,
-        sandboxUrl: preference.sandbox_init_point,
-        preferenceId: preference.id,
-        processor: 'mercadopago',
-    };
+        return {
+            url: result.init_point,
+            sandboxUrl: result.sandbox_init_point || result.init_point,
+            preapprovalId: result.id,
+            processor: 'mercadopago',
+        };
+    } catch (error) {
+        console.error("Error creando suscripción en MP:", error);
+        throw new Error("No se pudo iniciar el proceso de suscripción");
+    }
+}
+
+export async function createMPCheckout({ plan, eventId, userId, userEmail }) {
+    // Si queremos que TODO en MP sea suscripción, redirigimos a createMPSubscription
+    return createMPSubscription({ plan, eventId, userId, userEmail });
 }
 
 export async function handleMPWebhook(query, body) {
@@ -306,7 +357,7 @@ export async function handleMPWebhook(query, body) {
 // ═══════════════════════════════════════
 // Unified checkout (elige procesador)
 // ═══════════════════════════════════════
-export async function createCheckout({ plan, eventId, userId, processor }) {
+export async function createCheckout({ plan, eventId, userId, userEmail, processor }) {
     const chosenProcessor = processor || defaultProcessor;
 
     if (!isProcessorEnabled(chosenProcessor)) {
@@ -317,7 +368,7 @@ export async function createCheckout({ plan, eventId, userId, processor }) {
         case 'stripe':
             return createStripeCheckout({ plan, eventId, userId });
         case 'mercadopago':
-            return createMPCheckout({ plan, eventId, userId });
+            return createMPCheckout({ plan, eventId, userId, userEmail });
         default:
             throw new Error(`Procesador "${chosenProcessor}" no soportado`);
     }

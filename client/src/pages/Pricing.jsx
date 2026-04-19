@@ -77,7 +77,17 @@ export default function Pricing() {
         }
 
         if (planId === 'free') {
-            navigate('/dashboard');
+            setLoadingPlan('free');
+            try {
+                const token = getToken();
+                await api.activateFreePlan(token);
+                toast.success('¡Plan Gratuito activado!');
+                navigate('/dashboard');
+            } catch (err) {
+                toast.error('Error al activar plan gratuito');
+            } finally {
+                setLoadingPlan(null);
+            }
             return;
         }
 
@@ -104,24 +114,29 @@ export default function Pricing() {
         }
     };
 
+    const trialMinutes = import.meta.env.FREE_TRIAL_MINUTES || '30';
+    const freeMaxPhotos = import.meta.env.VITE_PLAN_FREE_MAX_PHOTOS || '50';
+    const proMaxPhotos = import.meta.env.VITE_PLAN_PRO_MAX_PHOTOS || '500';
+    const proPrice = parseInt(import.meta.env.VITE_PLAN_PRO_PRICE || '4990');
+    const premiumPrice = parseInt(import.meta.env.VITE_PLAN_PREMIUM_PRICE || '9990');
+
     const plans = [
         {
             id: 'free',
             name: 'Gratuito',
             price: { monthly: 0, annual: 0 },
-            period: 'siempre',
-            description: 'Probá Foto Eventos en tu próximo evento.',
+            period: 'una vez',
+            description: 'Probá Foto Eventos.',
             icon: Star,
             gradient: 'from-gray-500 to-gray-600',
             features: [
                 { text: '1 evento', included: true },
-                { text: 'Hasta 50 fotos', included: true },
+                { text: `Hasta ${freeMaxPhotos} fotos`, included: true },
+                { text: `Dura ${trialMinutes} minutos`, included: true },
                 { text: 'Pantalla en vivo', included: true },
                 { text: 'QR + código corto', included: true },
-                { text: 'Moderación IA', included: true },
                 { text: 'Descarga de fotos', included: false },
                 { text: 'Skins premium', included: false },
-                { text: 'Sin marca de agua', included: false },
             ],
             cta: 'Comenzar Gratis',
             popular: false,
@@ -129,20 +144,19 @@ export default function Pricing() {
         {
             id: 'pro',
             name: 'Pro',
-            price: { monthly: 4990, annual: 3990 }, // ~20% desc
+            price: { monthly: proPrice, annual: Math.round(proPrice * 0.8) },
             period: 'mes',
             description: 'Ideal para eventos medianos.',
             icon: Zap,
             gradient: 'from-primary-500 to-accent-500',
             features: [
                 { text: 'Eventos ilimitados', included: true },
-                { text: 'Hasta 500 fotos', included: true },
+                { text: `Hasta ${proMaxPhotos} fotos`, included: true },
                 { text: 'Pantalla en vivo', included: true },
                 { text: 'QR + código corto', included: true },
                 { text: 'Moderación IA', included: true },
                 { text: 'Descarga de fotos', included: true },
                 { text: 'Skins premium', included: true },
-                { text: 'Sin marca de agua', included: false },
             ],
             cta: 'Elegir Pro',
             popular: true,
@@ -150,7 +164,7 @@ export default function Pricing() {
         {
             id: 'premium',
             name: 'Premium',
-            price: { monthly: 9990, annual: 7990 }, // ~20% desc
+            price: { monthly: premiumPrice, annual: Math.round(premiumPrice * 0.8) },
             period: 'mes',
             description: 'Para grandes eventos sin límites.',
             icon: Crown,
@@ -189,18 +203,18 @@ export default function Pricing() {
                     </motion.div>
 
                     {/* Billing Cycle Toggle */}
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
                         className="flex items-center justify-center gap-4 mb-12"
                     >
                         <span className={`text-sm font-medium ${billingCycle === 'monthly' ? 'text-white' : 'text-white/40'}`}>Mensual</span>
-                        <button 
+                        <button
                             onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'annual' : 'monthly')}
                             className="relative w-14 h-7 rounded-full bg-white/10 p-1 transition-colors hover:bg-white/20"
                         >
-                            <motion.div 
+                            <motion.div
                                 animate={{ x: billingCycle === 'monthly' ? 0 : 28 }}
                                 className="w-5 h-5 rounded-full bg-primary-500 shadow-lg shadow-primary-500/50"
                             />

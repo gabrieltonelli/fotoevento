@@ -46,16 +46,20 @@ export default function CreateEvent() {
     ];
 
     const plans = [
-        { id: 'free', name: 'Gratuito', price: 0, photos: 50, desc: 'Ideal para probar' },
-        { id: 'pro', name: 'Pro', price: 4990, photos: 500, desc: 'Para fiestas grandes' },
-        { id: 'premium', name: 'Premium', price: 9990, photos: '∞', desc: 'Sin límites' },
+        { id: 'free', name: 'Gratuito', price: 0, photos: import.meta.env.VITE_PLAN_FREE_MAX_PHOTOS || '50', desc: `Prueba de ${import.meta.env.FREE_TRIAL_MINUTES || '30'} mins` },
+        { id: 'pro', name: 'Pro', price: parseInt(import.meta.env.VITE_PLAN_PRO_PRICE || '4990'), photos: import.meta.env.VITE_PLAN_PRO_MAX_PHOTOS || '500', desc: 'Para fiestas grandes' },
+        { id: 'premium', name: 'Premium', price: parseInt(import.meta.env.VITE_PLAN_PREMIUM_PRICE || '9990'), photos: '∞', desc: 'Sin límites' },
     ];
 
     const handleChange = (key, value) => {
         setForm(prev => {
             const updates = { [key]: value };
             if (key === 'plan') {
-                const planLimit = { free: 50, pro: 500, premium: 999999 };
+                const planLimit = { 
+                    free: parseInt(import.meta.env.VITE_PLAN_FREE_MAX_PHOTOS || '50'), 
+                    pro: parseInt(import.meta.env.VITE_PLAN_PRO_MAX_PHOTOS || '500'), 
+                    premium: 999999 
+                };
                 updates.max_photos = planLimit[value];
             }
             return { ...prev, ...updates };
@@ -257,8 +261,8 @@ export default function CreateEvent() {
                                                 onChange={(e) => handleChange(key, e.target.checked)}
                                                 className="sr-only"
                                             />
-                                            <div className={`w-11 h-6 rounded-full transition-all duration-300 ${form[key] ? 'bg-primary-500' : 'bg-white/10'}`}>
-                                                <div className={`w-5 h-5 rounded-full bg-white shadow-lg transform transition-transform duration-300 mt-0.5 ${form[key] ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+                                            <div className={`w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${form[key] ? 'bg-primary-500' : 'bg-white/10'}`}>
+                                                 <div className={`absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-white shadow transform transition-transform duration-200 ease-in-out ${form[key] ? 'translate-x-5' : 'translate-x-0'}`} />
                                             </div>
                                         </div>
                                     </label>

@@ -87,17 +87,35 @@ router.post('/:eventId/photos', optionalAuth, upload.single('photo'), async (req
         }
         // ---------------------------
 
-        // Moderate image with AI
+        // --- FREE PLAN LIMITS ---
+        const isFree = event.plan === 'free';
+        if (isFree) {
+            const createdAt = new Date(event.created_at);
+            const now = new Date();
+            const diffInMinutes = (now - createdAt) / (1000 * 60);
+
+            if (diffInMinutes > 30) {
+                return res.status(403).json({
+                    message: 'El periodo de prueba de 30 minutos ha finalizado. Mejorá tu plan para seguir subiendo fotos.',
+                    trial_expired: true
+                });
+            }
+        }
+        // -------------------------
+
+        // Moderate image with AI (Skip for Free plan)
         let moderationResult = { safe: true, reason: '' };
-        try {
-            moderationResult = await moderateImage(req.file.buffer);
-        } catch (modErr) {
-            console.warn('Moderation service unavailable, allowing photo:', modErr.message);
+        if (!isFree) {
+            try {
+                moderationResult = await moderateImage(req.file.buffer);
+            } catch (modErr) {
+                console.warn('Moderation service unavailable, allowing photo:', modErr.message);
+            }
         }
 
         if (!moderationResult.safe) {
             return res.status(422).json({
-                message: `Foto rechazada: ${moderationResult.reason}`,
+                message: `Foto rechazada por moderación: ${moderationResult.reason}`,
                 moderation: moderationResult,
             });
         }

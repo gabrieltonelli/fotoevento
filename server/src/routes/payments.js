@@ -51,6 +51,7 @@ router.post('/checkout', authMiddleware, async (req, res) => {
             plan,
             eventId: eventId || '',
             userId: req.user.id,
+            userEmail: req.user.email,
             processor,
         });
 
@@ -104,6 +105,29 @@ router.post('/webhook/mercadopago', async (req, res) => {
  * el frontend puede llamar aquí para asegurar la activación del plan
  * (en caso de que el webhook no haya llegado aún)
  */
+/**
+ * POST /api/payments/activate-free - Activar plan gratuito
+ */
+router.post('/activate-free', authMiddleware, async (req, res) => {
+    try {
+        const success = await activatePlan({
+            plan: 'free',
+            userId: req.user.id,
+            eventId: '',
+            paymentId: 'free-activation',
+            processor: 'none',
+        });
+
+        if (success) {
+            res.json({ message: 'Plan gratuito activado', activated: true });
+        } else {
+            res.status(500).json({ message: 'Error al activar plan gratuito' });
+        }
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.post('/activate-from-redirect', authMiddleware, async (req, res) => {
     try {
         const { plan, eventId, paymentId, processor } = req.body;
@@ -172,6 +196,26 @@ router.get('/status/:eventId', authMiddleware, async (req, res) => {
             isActive: event.is_active,
             features: planInfo,
         });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+/**
+ * GET /api/payments - Obtener historial de pagos del usuario
+ */
+router.get('/', authMiddleware, async (req, res) => {
+    try {
+        const { supabase } = await import('../services/supabase.js');
+        const { data: payments, error } = await supabase
+            .from('payments')
+            .select('*, events(name)')
+            .eq('user_id', req.user.id)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        res.json({ payments: payments || [] });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

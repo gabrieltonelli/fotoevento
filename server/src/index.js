@@ -13,6 +13,7 @@ import eventRoutes from './routes/events.js';
 import photoRoutes from './routes/photos.js';
 import paymentRoutes from './routes/payments.js';
 import publicRoutes from './routes/public.js';
+import profileRoutes from './routes/profile.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -29,6 +30,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/events', photoRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/profile', profileRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

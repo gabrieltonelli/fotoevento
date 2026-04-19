@@ -40,6 +40,28 @@ router.post('/', authMiddleware, async (req, res) => {
             return res.status(400).json({ message: 'Nombre y fecha son requeridos' });
         }
 
+        // --- FREE PLAN LIMITS ---
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('subscription_plan')
+            .eq('id', req.user.id)
+            .single();
+        
+        if (profile?.subscription_plan === 'free' || !profile) {
+            const { count: eventCount } = await supabase
+                .from('events')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', req.user.id);
+            
+            if (eventCount >= 1) {
+                return res.status(403).json({
+                    message: 'El plan gratuito está limitado a 1 evento. Mejorá tu plan para crear eventos ilimitados.',
+                    limit_reached: true
+                });
+            }
+        }
+        // -------------------------
+
         const shortCode = nanoid(8).toUpperCase();
 
         const { data: event, error } = await supabase

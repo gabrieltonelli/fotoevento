@@ -71,7 +71,7 @@ export default function Pricing() {
         }
     }, [searchParams]);
 
-    const { profile } = useAuth();
+
     const trialsUsed = profile?.trials_used_count || (profile?.trial_used ? 1 : 0);
     const trialsRemaining = Math.max(0, freeTrialLimit - trialsUsed);
     const hasTrialsLeft = trialsRemaining > 0;

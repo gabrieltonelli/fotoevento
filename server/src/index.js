@@ -1,12 +1,8 @@
 import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Cargar .env desde la raíz del proyecto
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+// Only load dotenv in non-production environments
+if (process.env.NODE_ENV !== 'production') {
+    dotenv.config();
+}
 import express from 'express';
 import cors from 'cors';
 import eventRoutes from './routes/events.js';

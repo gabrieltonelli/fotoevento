@@ -1,13 +1,9 @@
 import { supabase } from '../services/supabase.js';
 import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Asegurar carga de .env
-dotenv.config({ path: path.join(__dirname, '../../../.env') });
+// Only load dotenv in non-production environments
+if (process.env.NODE_ENV !== 'production') {
+    dotenv.config();
+}
 
 // ─── Modo Desarrollo ───
 const DEV_MODE = process.env.VITE_DEV_MODE === 'true';

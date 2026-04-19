@@ -7,7 +7,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import {
     ArrowLeft, Monitor, QrCode, Copy, Download, Settings,
     Camera, Users, Calendar, MapPin, Share2, ExternalLink,
-    Trash2, Power, PowerOff, Image as ImageIcon, Loader2, X
+    Trash2, Power, PowerOff, Image as ImageIcon, Loader2, X, Crown,
+    Pencil, Check
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import toast from 'react-hot-toast';
@@ -21,6 +22,9 @@ export default function EventDetail() {
     const qrRef = useRef(null);
 
     const [event, setEvent] = useState(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editForm, setEditForm] = useState({ name: '', date: '', location: '' });
+    const [isUpdating, setIsUpdating] = useState(false);
     const [photos, setPhotos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 1 });
@@ -29,23 +33,49 @@ export default function EventDetail() {
 
     const pageSize = parseInt(import.meta.env.VITE_DASHBOARD_PAGE_SIZE || '24', 10);
 
+    const loadEvent = async () => {
+        try {
+            const token = getToken();
+            const data = await api.getEvent(id, token);
+            setEvent(data.event);
+            setEditForm({
+                name: data.event.name,
+                date: data.event.date.split('T')[0],
+                location: data.event.location || ''
+            });
+        } catch (err) {
+            console.error('Error loading event:', err);
+            toast.error('No se pudo cargar el evento');
+            navigate('/dashboard');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Fetch event data from API
     useEffect(() => {
-        const loadEvent = async () => {
-            try {
-                const token = getToken();
-                const data = await api.getEvent(id, token);
-                setEvent(data.event);
-            } catch (err) {
-                console.error('Error loading event:', err);
-                toast.error('No se pudo cargar el evento');
-                navigate('/dashboard');
-            } finally {
-                setLoading(false);
-            }
-        };
         loadEvent();
     }, [id, getToken, navigate]);
+
+    const handleUpdateEvent = async () => {
+        if (!editForm.name || !editForm.date) {
+            toast.error('Nombre y fecha son requeridos');
+            return;
+        }
+
+        setIsUpdating(true);
+        try {
+            const token = getToken();
+            await api.updateEvent(event.id, editForm, token);
+            toast.success('Evento actualizado');
+            setIsEditing(false);
+            loadEvent(); // Recargar datos
+        } catch (err) {
+            toast.error('Error al actualizar el evento');
+        } finally {
+            setIsUpdating(false);
+        }
+    };
 
     // Fetch photos with pagination
     useEffect(() => {
@@ -67,29 +97,46 @@ export default function EventDetail() {
     }, [event, pagination.page, pageSize]);
 
     const handleDownloadAll = async () => {
-        if (photos.length === 0) return;
         setIsDownloadingAll(true);
         const zip = new JSZip();
-        
+
         try {
-            toast.loading('Generando archivo ZIP...', { id: 'zip-toast' });
-            
-            const promises = photos.map(async (photo, index) => {
-                const response = await fetch(photo.url);
-                const blob = await response.blob();
-                const extension = photo.url.split('.').pop().split('?')[0] || 'jpg';
-                const filename = `${photo.guest_name}-${index + 1}.${extension}`;
-                zip.file(filename, blob);
+            toast.loading('Obteniendo lista completa de fotos...', { id: 'zip-toast' });
+
+            // 1. Obtener todas las fotos del evento (sin paginación de la UI)
+            const allPhotosData = await api.getPhotos(event.id, 1, 10000);
+            const allPhotos = allPhotosData.photos || [];
+
+            if (allPhotos.length === 0) {
+                toast.error('No hay fotos para descargar', { id: 'zip-toast' });
+                return;
+            }
+
+            toast.loading(`Descargando ${allPhotos.length} fotos...`, { id: 'zip-toast' });
+
+            // 2. Descargar y agregar al ZIP
+            const promises = allPhotos.map(async (photo, index) => {
+                try {
+                    const response = await fetch(photo.url);
+                    const blob = await response.blob();
+                    const extension = photo.url.split('.').pop().split('?')[0] || 'jpg';
+                    const filename = `${photo.guest_name}-${index + 1}.${extension}`;
+                    zip.file(filename, blob);
+                } catch (err) {
+                    console.error(`Error descargando foto ${index}:`, err);
+                }
             });
 
             await Promise.all(promises);
+
+            toast.loading('Generando archivo ZIP final...', { id: 'zip-toast' });
             const content = await zip.generateAsync({ type: 'blob' });
-            saveAs(content, `fotos-${event.name}-${event.short_code}.zip`);
-            
-            toast.success('¡ZIP generado exitosamente!', { id: 'zip-toast' });
+            saveAs(content, `fotos-${event.name}-${event.short_code}-completo.zip`);
+
+            toast.success('¡Respaldo completo descargado!', { id: 'zip-toast' });
         } catch (err) {
-            console.error('Error generating ZIP:', err);
-            toast.error('Error al generar el ZIP', { id: 'zip-toast' });
+            console.error('Error in handleDownloadAll:', err);
+            toast.error('Error al procesar la descarga masiva', { id: 'zip-toast' });
         } finally {
             setIsDownloadingAll(false);
         }
@@ -138,11 +185,11 @@ export default function EventDetail() {
             // Draw QR
             ctx.drawImage(img, padding, padding, size, size);
 
-            // Draw short code text below
-            ctx.fillStyle = '#333333';
-            ctx.font = 'bold 24px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(`Código: ${event.short_code}`, canvas.width / 2, size + padding + 40);
+            /* Quitamos el texto del código para simplificar el QR */
+            // ctx.fillStyle = '#333333';
+            // ctx.font = 'bold 24px sans-serif';
+            // ctx.textAlign = 'center';
+            // ctx.fillText(`Código: ${event.short_code}`, canvas.width / 2, size + padding + 40);
 
             // Download
             const link = document.createElement('a');
@@ -153,6 +200,32 @@ export default function EventDetail() {
         };
 
         img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgData)))}`;
+    };
+
+    const skins = [
+        { value: 'classic-dark', label: 'Clásico Oscuro', preview: 'bg-dark-900' },
+        { value: 'classic-light', label: 'Clásico Claro', preview: 'bg-gray-100' },
+        { value: 'elegant-gold', label: 'Elegante Dorado', preview: 'bg-gradient-to-br from-amber-900 to-yellow-800', premium: true },
+        { value: 'neon', label: 'Neon', preview: 'bg-gradient-to-br from-purple-900 to-pink-900', premium: true },
+        { value: 'minimal', label: 'Minimalista', preview: 'bg-white', premium: true },
+        { value: 'fiesta', label: 'Fiesta', preview: 'bg-gradient-to-br from-rose-600 to-orange-500', premium: true },
+    ];
+
+    const handleUpdateSkin = async (skinValue) => {
+        if (event.plan === 'free' && skins.find(s => s.value === skinValue)?.premium) {
+            toast.error('Este skin requiere un plan Pro o Premium');
+            navigate(`/pricing?event=${event.id}`);
+            return;
+        }
+
+        try {
+            const token = getToken();
+            await api.updateEvent(event.id, { skin: skinValue }, token);
+            setEvent(prev => ({ ...prev, skin: skinValue }));
+            toast.success('Skin actualizado');
+        } catch (err) {
+            toast.error('Error al actualizar el skin');
+        }
     };
 
     if (loading) {
@@ -176,22 +249,81 @@ export default function EventDetail() {
 
                 {/* Event Header */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-8 mb-6">
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                        <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <h1 className="font-display text-3xl font-bold text-white">{event.name}</h1>
-                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${event.is_active ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-white/40'
-                                    }`}>
-                                    {event.is_active ? '● Activo' : '○ Inactivo'}
-                                </span>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-4 text-sm text-white/40">
-                                <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{new Date(event.date).toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                                {event.location && <span className="flex items-center gap-1"><MapPin className="w-4 h-4" />{event.location}</span>}
-                            </div>
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                        <div className="flex-1 w-full">
+                            {isEditing ? (
+                                <div className="space-y-4">
+                                    <input
+                                        type="text"
+                                        value={editForm.name}
+                                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-2xl font-bold text-white focus:outline-none focus:border-primary-500/50 transition-colors"
+                                        placeholder="Nombre del evento"
+                                    />
+                                    <div className="flex flex-wrap gap-4">
+                                        <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 min-w-[200px]">
+                                            <Calendar className="w-4 h-4 text-white/40" />
+                                            <input
+                                                type="date"
+                                                value={editForm.date}
+                                                onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                                                className="bg-transparent text-sm text-white focus:outline-none w-full"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 flex-1">
+                                            <MapPin className="w-4 h-4 text-white/40" />
+                                            <input
+                                                type="text"
+                                                value={editForm.location}
+                                                onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                                                className="bg-transparent text-sm text-white focus:outline-none w-full"
+                                                placeholder="Ubicación"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 pt-2">
+                                        <button 
+                                            onClick={handleUpdateEvent}
+                                            disabled={isUpdating}
+                                            className="btn-primary !py-2 !text-xs flex items-center gap-2"
+                                        >
+                                            {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                            Guardar Cambios
+                                        </button>
+                                        <button 
+                                            onClick={() => setIsEditing(false)}
+                                            className="btn-ghost !py-2 !text-xs flex items-center gap-2"
+                                        >
+                                            <X className="w-4 h-4" />
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <h1 className="font-display text-3xl font-bold text-white">{event.name}</h1>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${event.is_active ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-white/40'
+                                            }`}>
+                                            {event.is_active ? '● Activo' : '○ Inactivo'}
+                                        </span>
+                                        <button 
+                                            onClick={() => setIsEditing(true)}
+                                            className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-all ml-2"
+                                            title="Editar datos del evento"
+                                        >
+                                            <Pencil className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-4 text-sm text-white/40">
+                                        <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{new Date(event.date + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                                        {event.location && <span className="flex items-center gap-1"><MapPin className="w-4 h-4" />{event.location}</span>}
+                                    </div>
+                                </>
+                            )}
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2 shrink-0">
                             <a href={screenUrl} target="_blank" rel="noopener noreferrer" className="btn-primary flex items-center gap-2 !text-sm">
                                 <Monitor className="w-4 h-4" />
                                 Abrir Pantalla
@@ -215,20 +347,74 @@ export default function EventDetail() {
                                     { label: 'Fotos', value: pagination.total, max: event.max_photos, icon: ImageIcon, color: 'bg-primary-500' },
                                     { label: 'Plan', value: event.plan || 'free', icon: Users, color: 'bg-accent-500' },
                                 ].map(({ label, value, max, icon: Icon, color }) => (
-                                    <div key={label}>
-                                        <div className="flex items-center justify-between mb-1">
+                                    <div key={label} className="relative group">
+                                        <div className="flex items-center justify-between mb-2">
                                             <span className="text-sm text-white/50 flex items-center gap-2">
-                                                <Icon className="w-4 h-4" /> {label}
+                                                <Icon className={`w-4 h-4 ${label === 'Fotos' && value / max > 0.8 ? 'text-orange-400 animate-pulse' : ''}`} />
+                                                {label}
                                             </span>
-                                            <span className="text-sm font-bold text-white">{value}{max ? `/${max}` : ''}</span>
+                                            <div className="flex items-center gap-3">
+                                                {label === 'Plan' && value !== 'premium' && (
+                                                    <motion.button
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                        onClick={() => navigate(`/pricing?event=${event.id}`)}
+                                                        className="flex items-center gap-1 text-[10px] uppercase font-black tracking-wider text-white bg-gradient-to-r from-amber-400 to-orange-500 px-3 py-1 rounded-full shadow-[0_0_15px_rgba(251,191,36,0.3)] hover:shadow-[0_0_20px_rgba(251,191,36,0.5)] transition-all"
+                                                    >
+                                                        <Crown className="w-3 h-3" />
+                                                        Upgrade
+                                                    </motion.button>
+                                                )}
+                                                <span className={`text-sm font-bold uppercase ${label === 'Fotos' && value / max > 0.8 ? 'text-orange-400' : 'text-white'}`}>
+                                                    {value}{max ? `/${max}` : ''}
+                                                </span>
+                                            </div>
                                         </div>
                                         {max && (
-                                            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                                                <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${Math.min((value / max) * 100, 100)}%` }} />
+                                            <div className="h-2 bg-white/5 rounded-full overflow-hidden relative">
+                                                <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: `${Math.min((value / max) * 100, 100)}%` }}
+                                                    className={`h-full rounded-full transition-all duration-1000 ${value / max > 0.8
+                                                        ? 'bg-gradient-to-r from-orange-500 to-red-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]'
+                                                        : 'bg-primary-500'
+                                                        }`}
+                                                />
                                             </div>
+                                        )}
+                                        {label === 'Fotos' && value / max > 0.8 && (
+                                            <p className="text-[10px] text-orange-400/80 mt-1 leading-tight font-medium">
+                                                ⚠️ Estás cerca del límite. Tus fotos podrían dejar de aparecer pronto.
+                                            </p>
                                         )}
                                     </div>
                                 ))}
+                            </div>
+
+                            {/* Skin Selector */}
+                            <div className="mt-8 pt-6 border-t border-white/5">
+                                <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                                    <Settings className="w-4 h-4 text-primary-400" />
+                                    Skin de Pantalla
+                                </h3>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {skins.map(skin => (
+                                        <button
+                                            key={skin.value}
+                                            onClick={() => handleUpdateSkin(skin.value)}
+                                            className={`relative rounded-xl border overflow-hidden transition-all group ${event.skin === skin.value
+                                                ? 'border-primary-500 ring-2 ring-primary-500/30'
+                                                : 'border-white/5 hover:border-white/20'
+                                                }`}
+                                        >
+                                            <div className={`h-10 ${skin.preview}`} />
+                                            <div className="p-2 bg-dark-900/50 flex items-center justify-between">
+                                                <span className="text-[10px] font-medium text-white/70 truncate mr-1">{skin.label}</span>
+                                                {skin.premium && <Crown className="w-3 h-3 text-amber-400 shrink-0" />}
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </motion.div>
 
@@ -251,12 +437,7 @@ export default function EventDetail() {
                                     </button>
                                 </div>
 
-                                <div className="glass rounded-lg px-4 py-2 flex items-center justify-between">
-                                    <span className="text-xl font-mono font-bold text-white">{event.short_code}</span>
-                                    <button onClick={() => copyToClipboard(event.short_code, 'Código')} className="text-primary-400 hover:text-primary-300 ml-2">
-                                        <Copy className="w-4 h-4" />
-                                    </button>
-                                </div>
+
 
                                 <button onClick={downloadQR} className="w-full btn-secondary flex items-center justify-center gap-2 !text-sm mt-2">
                                     <Download className="w-4 h-4" />
@@ -274,9 +455,9 @@ export default function EventDetail() {
                                     <Camera className="w-5 h-5 text-primary-400" />
                                     Fotos del Evento ({pagination.total})
                                 </h3>
-                                
+
                                 {photos.length > 0 && (
-                                    <button 
+                                    <button
                                         onClick={handleDownloadAll}
                                         disabled={isDownloadingAll}
                                         className="btn-secondary flex items-center gap-2 !text-xs !py-2"
@@ -286,7 +467,7 @@ export default function EventDetail() {
                                         ) : (
                                             <Download className="w-4 h-4" />
                                         )}
-                                        Descargar Todas (Página {pagination.page})
+                                        Descargar todas
                                     </button>
                                 )}
                             </div>
@@ -301,8 +482,8 @@ export default function EventDetail() {
                                 <>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                         {photos.map((photo) => (
-                                            <div 
-                                                key={photo.id} 
+                                            <div
+                                                key={photo.id}
                                                 className="aspect-square rounded-xl overflow-hidden group cursor-pointer relative"
                                                 onClick={() => setSelectedPhoto(photo)}
                                             >
@@ -313,7 +494,7 @@ export default function EventDetail() {
                                                 />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <div className="absolute top-2 right-2">
-                                                        <button 
+                                                        <button
                                                             onClick={(e) => downloadSingle(e, photo)}
                                                             className="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
                                                         >
@@ -382,7 +563,7 @@ export default function EventDetail() {
                             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 glass px-4 py-2 rounded-full text-white text-sm flex items-center gap-4">
                                 <span className="font-bold">{selectedPhoto.guest_name}</span>
                                 <div className="w-px h-4 bg-white/20" />
-                                <button 
+                                <button
                                     onClick={(e) => downloadSingle(e, selectedPhoto)}
                                     className="hover:text-primary-400 transition-colors flex items-center gap-1"
                                 >

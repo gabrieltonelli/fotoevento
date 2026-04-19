@@ -1,4 +1,12 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Cargar .env desde la raíz del proyecto
+dotenv.config({ path: path.join(__dirname, '../../.env') });
 import express from 'express';
 import cors from 'cors';
 import eventRoutes from './routes/events.js';

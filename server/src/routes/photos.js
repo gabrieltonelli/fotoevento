@@ -47,7 +47,7 @@ router.post('/:eventId/photos', optionalAuth, upload.single('photo'), async (req
         }
 
         if (!event.is_active) {
-            return res.status(403).json({ message: 'Este evento no está activo' });
+            return res.status(403).json({ message: 'Ya no es posible enviar fotos. Evento desactivado' });
         }
 
         // Check photo limit
@@ -58,8 +58,8 @@ router.post('/:eventId/photos', optionalAuth, upload.single('photo'), async (req
             .eq('status', 'approved');
 
         if (currentPhotos >= event.max_photos) {
-            return res.status(403).json({ 
-                message: `Límite de fotos alcanzado (${event.max_photos}). Mejorá tu plan para recibir más.` 
+            return res.status(403).json({
+                message: `Límite de fotos alcanzado (${event.max_photos}). Mejorá tu plan para recibir más.`
             });
         }
 
@@ -79,9 +79,9 @@ router.post('/:eventId/photos', optionalAuth, upload.single('photo'), async (req
                 .maybeSingle();
 
             if (existingPhoto) {
-                return res.status(409).json({ 
+                return res.status(409).json({
                     message: 'Esta imagen ya ha sido enviada con anterioridad a este evento.',
-                    is_duplicate: true 
+                    is_duplicate: true
                 });
             }
         }
@@ -167,7 +167,7 @@ router.get('/:eventId/photos', async (req, res) => {
 
         if (error) throw error;
 
-        res.json({ 
+        res.json({
             photos: photos || [],
             total: count,
             page,

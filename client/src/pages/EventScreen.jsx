@@ -66,17 +66,27 @@ export default function EventScreen() {
         return () => clearInterval(interval);
     }, [photos.length, rotationLimit]);
 
-    const isDark = event?.dark_mode !== false;
+    const skinStyles = {
+        'classic-dark': 'bg-dark-950 text-white',
+        'classic-light': 'bg-gray-50 text-gray-900',
+        'elegant-gold': 'bg-gradient-to-br from-amber-950 via-yellow-900 to-amber-950 text-amber-50',
+        'neon': 'bg-gradient-to-br from-purple-950 via-indigo-950 to-pink-950 text-white',
+        'minimal': 'bg-white text-gray-900',
+        'fiesta': 'bg-gradient-to-br from-rose-900 via-orange-900 to-amber-900 text-white',
+    };
+
+    const currentSkin = event?.skin || (event?.dark_mode === false ? 'classic-light' : 'classic-dark');
+    const isDark = !['classic-light', 'minimal'].includes(currentSkin);
 
     return (
-        <div className={`min-h-screen ${isDark ? 'bg-dark-950' : 'bg-gray-50'} overflow-hidden relative`}>
+        <div className={`min-h-screen ${skinStyles[currentSkin] || skinStyles['classic-dark']} overflow-hidden relative transition-colors duration-1000`}>
             {/* Background effects */}
             {isDark && (
                 <>
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary-950/20 via-transparent to-transparent" />
-                    <div className="absolute top-0 left-0 w-full h-full">
-                        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/5 rounded-full blur-3xl animate-float" />
-                        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent-500/5 rounded-full blur-3xl animate-float animate-delay-300" />
+                    <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
+                        <div className={`absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl animate-float opacity-20 ${currentSkin === 'elegant-gold' ? 'bg-amber-400' : 'bg-primary-500'}`} />
+                        <div className={`absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full blur-3xl animate-float animate-delay-300 opacity-20 ${currentSkin === 'fiesta' ? 'bg-orange-500' : 'bg-accent-500'}`} />
                     </div>
                 </>
             )}
@@ -167,11 +177,8 @@ export default function EventScreen() {
                         <div className="bg-white rounded-xl p-2 mb-2">
                             <QRCodeSVG value={uploadUrl} size={120} level="H" />
                         </div>
-                        <p className={`text-xs font-medium ${isDark ? 'text-white/60' : 'text-gray-600'}`}>
-                            Escaneá para subir fotos
-                        </p>
-                        <p className={`text-lg font-mono font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                            {shortCode}
+                        <p className={`text-lg font-bold leading-tight ${isDark ? 'text-primary-400' : 'text-primary-600'}`}>
+                            Escaneá para <br/> subir fotos
                         </p>
                     </div>
                 </motion.div>

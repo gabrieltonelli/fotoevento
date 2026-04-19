@@ -5,7 +5,7 @@ import { api } from '../services/api';
 import { motion } from 'framer-motion';
 import {
     ArrowLeft, Calendar, Type, MapPin, Palette, Settings,
-    Eye, EyeOff, QrCode, Lock, Users, Save
+    Eye, EyeOff, QrCode, Lock, Users, Save, Crown
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import toast from 'react-hot-toast';
@@ -257,8 +257,8 @@ export default function CreateEvent() {
                                                 onChange={(e) => handleChange(key, e.target.checked)}
                                                 className="sr-only"
                                             />
-                                            <div className={`w-11 h-6 rounded-full transition-colors ${form[key] ? 'bg-primary-500' : 'bg-white/10'}`}>
-                                                <div className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform mt-0.5 ${form[key] ? 'translate-x-5.5 ml-0.5' : 'translate-x-0.5'}`} />
+                                            <div className={`w-11 h-6 rounded-full transition-all duration-300 ${form[key] ? 'bg-primary-500' : 'bg-white/10'}`}>
+                                                <div className={`w-5 h-5 rounded-full bg-white shadow-lg transform transition-transform duration-300 mt-0.5 ${form[key] ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
                                             </div>
                                         </div>
                                     </label>

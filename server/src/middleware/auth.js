@@ -1,21 +1,70 @@
 import { supabase } from '../services/supabase.js';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Asegurar carga de .env
+dotenv.config({ path: path.join(__dirname, '../../../.env') });
 
 // ─── Modo Desarrollo ───
-const DEV_MODE = process.env.DEV_MODE === 'true';
-const DEV_USER = DEV_MODE ? {
-    id: process.env.DEV_USER_ID || 'dev-user-00000-00000-00000',
-    email: process.env.DEV_USER_EMAIL || 'dev@fotoevento.dev',
-    user_metadata: {
-        full_name: process.env.DEV_USER_NAME || 'Dev User',
-    },
-    app_metadata: {},
-    aud: 'authenticated',
-    role: 'authenticated',
-} : null;
+const DEV_MODE = process.env.VITE_DEV_MODE === 'true';
+let resolvedDevUser = null;
 
-if (DEV_MODE) {
-    console.log('🛠️ Auth Middleware en Modo Desarrollo — usuario mock:', DEV_USER.email);
+async function getDevUser() {
+    if (resolvedDevUser) return resolvedDevUser;
+    const email = process.env.VITE_DEV_USER_EMAIL || 'gabrieltonelli@gmail.com';
+    const envId = process.env.VITE_DEV_USER_ID;
+
+    // Si ya tenemos el ID en el .env, lo usamos directo
+    if (envId && envId.length > 20) {
+        resolvedDevUser = {
+            id: envId,
+            email,
+            user_metadata: { full_name: process.env.VITE_DEV_USER_NAME || 'Gabriel Tonelli' },
+            role: 'authenticated'
+        };
+        return resolvedDevUser;
+    }
+
+    try {
+        console.log(`🛠️ [DevMode] Buscando UUID real para: ${email}...`);
+        
+        // Usar el API de Admin para buscar el usuario por email
+        const { data: { users }, error } = await supabase.auth.admin.listUsers({
+            filters: { email: email }
+        });
+
+        const realUser = users?.find(u => u.email === email);
+
+        if (realUser) {
+            resolvedDevUser = {
+                id: realUser.id,
+                email: realUser.email,
+                user_metadata: realUser.user_metadata,
+                role: 'authenticated'
+            };
+            console.log(`🛠️ [DevMode] UUID resuelto desde Supabase Auth: ${resolvedDevUser.id}`);
+            return resolvedDevUser;
+        } else {
+            console.warn(`⚠️ [DevMode] No se encontró ningún usuario con el email ${email} en Supabase.`);
+        }
+    } catch (err) {
+        console.warn('⚠️ [DevMode] Error al buscar ID real mediante Admin API:', err.message);
+    }
+
+    // Fallback si nada funciona
+    resolvedDevUser = {
+        id: 'dev-user-mock',
+        email,
+        user_metadata: { full_name: process.env.VITE_DEV_USER_NAME || 'Gabriel Tonelli' },
+        role: 'authenticated'
+    };
+    return resolvedDevUser;
 }
+
 
 export async function authMiddleware(req, res, next) {
     const authHeader = req.headers.authorization;
@@ -24,7 +73,7 @@ export async function authMiddleware(req, res, next) {
     if (DEV_MODE) {
         const token = authHeader?.split(' ')[1];
         if (token === 'dev-token-fotoevento' || !authHeader) {
-            req.user = DEV_USER;
+            req.user = await getDevUser();
             req.token = 'dev-token-fotoevento';
             return next();
         }
@@ -55,7 +104,7 @@ export async function authMiddleware(req, res, next) {
 export async function optionalAuth(req, res, next) {
     // Dev mode: siempre adjuntar usuario mock
     if (DEV_MODE) {
-        req.user = DEV_USER;
+        req.user = await getDevUser();
         req.token = 'dev-token-fotoevento';
         return next();
     }

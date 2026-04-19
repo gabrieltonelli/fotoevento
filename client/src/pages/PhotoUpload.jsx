@@ -119,6 +119,9 @@ export default function PhotoUpload() {
         if (pendingPhotos.length === 0) return;
         setUploading(true);
 
+        let successCount = 0;
+        let failCount = 0;
+
         for (const photo of pendingPhotos) {
             // Mark as uploading
             setPhotos(prev => prev.map(p => p.id === photo.id ? { ...p, status: 'uploading' } : p));
@@ -139,18 +142,24 @@ export default function PhotoUpload() {
                 // Mark as success
                 setPhotos(prev => prev.map(p => p.id === photo.id ? { ...p, status: 'success', message: '¡Aprobada!' } : p));
                 setUploadedCount(c => c + 1);
+                successCount++;
 
                 // Remove after 1.5s with animation
                 setTimeout(() => {
                     removePhoto(photo.id);
                 }, 1500);
             } catch (err) {
+                failCount++;
                 setPhotos(prev => prev.map(p => p.id === photo.id ? { ...p, status: 'error', message: err.message } : p));
             }
         }
 
         setUploading(false);
-        toast.success('¡Fotos enviadas! Podés seguir subiendo más.');
+        if (successCount > 0 && failCount === 0) {
+            toast.success('¡Fotos enviadas! Podés seguir subiendo más.');
+        } else if (failCount > 0) {
+            toast.error('Hubo errores al subir algunas fotos.');
+        }
     };
 
     return (
@@ -185,16 +194,41 @@ export default function PhotoUpload() {
                     </div>
                 )}
 
+                {/* Event Inactive Alert */}
+                {event && !event.is_active && (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 mb-6 text-center"
+                    >
+                        <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+                        <h2 className="font-display font-bold text-white text-lg mb-1">Evento Finalizado o Desactivado</h2>
+                        <p className="text-white/60 text-sm">
+                            Ya no es posible subir fotos a este evento. ¡Gracias por participar!
+                        </p>
+                    </motion.div>
+                )}
+
                 {/* Upload Zone */}
                 <div
                     className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer ${dragOver
                         ? 'border-primary-500 bg-primary-500/10'
                         : 'border-white/10 hover:border-white/20 hover:bg-white/5'
-                        }`}
-                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                        } ${(event && !event.is_active) ? 'opacity-30 cursor-not-allowed grayscale' : ''}`}
+                    onDragOver={(e) => { 
+                        if (event?.is_active === false) return;
+                        e.preventDefault(); 
+                        setDragOver(true); 
+                    }}
                     onDragLeave={() => setDragOver(false)}
-                    onDrop={handleDrop}
-                    onClick={() => fileInput.current?.click()}
+                    onDrop={(e) => {
+                        if (event?.is_active === false) return;
+                        handleDrop(e);
+                    }}
+                    onClick={() => {
+                        if (event?.is_active === false) return;
+                        fileInput.current?.click();
+                    }}
                 >
                     <input
                         ref={fileInput}
@@ -203,6 +237,7 @@ export default function PhotoUpload() {
                         multiple
                         className="hidden"
                         onChange={(e) => handleFiles(e.target.files)}
+                        disabled={event && !event.is_active}
                     />
 
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 flex items-center justify-center mx-auto mb-4">

@@ -157,21 +157,33 @@ export default function Dashboard() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-primary-600/20 to-accent-600/20 border border-white/5 flex flex-col md:flex-row items-center justify-between gap-6"
+                        className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent border border-amber-500/20 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden group shadow-[0_0_30px_rgba(251,191,36,0.05)]"
                     >
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-primary-500/20 flex items-center justify-center">
-                                <ArrowUpCircle className="w-8 h-8 text-primary-400" />
+                        {/* Decorative background glow */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 blur-[100px] -mr-32 -mt-32 pointer-events-none" />
+                        
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-600 p-0.5 shadow-lg">
+                                <div className="w-full h-full rounded-2xl bg-dark-950 flex items-center justify-center">
+                                    <Crown className="w-8 h-8 text-amber-400 animate-pulse" />
+                                </div>
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-white">Pasate a Premium</h3>
-                                <p className="text-white/50 text-sm italic">Fotos ilimitadas, descarga completa y todos los skins exclusivos.</p>
+                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                    Experiencia Premium de Foto Eventos
+                                </h3>
+                                <p className="text-white/50 text-sm">Fotos ilimitadas, descarga completa de álbumes y personalización total.</p>
                             </div>
                         </div>
-                        <Link to="/pricing" className="btn-primary flex items-center gap-2 w-full md:w-auto">
-                            <Crown className="w-4 h-4" />
-                            Mejorar Plan
-                        </Link>
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full md:w-auto relative z-10">
+                            <Link 
+                                to="/pricing" 
+                                className="flex items-center justify-center gap-2 px-8 py-3 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white font-black tracking-wider uppercase text-xs shadow-[0_0_20px_rgba(251,191,36,0.3)] hover:shadow-[0_0_25px_rgba(251,191,36,0.5)] transition-all"
+                            >
+                                <Crown className="w-4 h-4" />
+                                Mejorar mi Plan
+                            </Link>
+                        </motion.div>
                     </motion.div>
                 )}
 
@@ -271,8 +283,8 @@ export default function Dashboard() {
                                             <p className="text-xs text-white/40">Invitados</p>
                                         </div>
                                         <div className="text-center">
-                                            <p className="text-sm font-medium text-white/70">{event.short_code}</p>
-                                            <p className="text-xs text-white/40">Código</p>
+                                            <p className="text-sm font-medium text-white/70 uppercase">{event.plan || 'free'}</p>
+                                            <p className="text-xs text-white/40">Plan</p>
                                         </div>
                                     </div>
 

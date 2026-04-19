@@ -99,8 +99,7 @@ export async function activatePlan({ plan, userId, eventId, paymentId, processor
 
     const planInfo = PLANS[plan];
     if (!planInfo) {
-        console.error(`Plan "${plan}" no encontrado`);
-        return false;
+        throw new Error(`Plan "${plan}" no encontrado`);
     }
 
     try {
@@ -115,27 +114,41 @@ export async function activatePlan({ plan, userId, eventId, paymentId, processor
 
         // 1. Obtener perfil actual para verificar trial (si es plan free)
         if (plan === 'free') {
-            const { data: profile } = await supabase
+            const { data: profile, error: fetchError } = await supabase
                 .from('profiles')
-                .select('trial_used')
+                .select('trial_used, trials_used_count')
                 .eq('id', userId)
                 .single();
             
-            if (profile?.trial_used) {
-                console.warn(`Usuario ${userId} ya utilizó su plan gratuito.`);
-                return false;
+            if (fetchError && fetchError.code !== 'PGRST116') {
+                console.error('Error fetching profile:', fetchError);
+                throw new Error('Error al verificar elegibilidad del plan gratuito');
             }
+
+            const limit = parseInt(process.env.FREE_TRIAL_LIMIT || '1');
+            const used = profile?.trials_used_count || (profile?.trial_used ? 1 : 0);
+
+            if (used >= limit) {
+                console.warn(`Usuario ${userId} ya utilizó sus ${limit} pruebas gratuitas.`);
+                throw new Error(`Has alcanzado el límite de ${limit} pruebas gratuitas permitidas para tu cuenta.`);
+            }
+
+            // Guardar el conteo actual para el incremento
+            profile.current_used_count = used;
         }
 
         // 2. Actualizar el perfil del usuario
+        const trialLimit = parseInt(process.env.FREE_TRIAL_LIMIT || '1');
         const profileUpdates = {
             subscription_plan: plan,
             subscription_status: 'active',
             subscription_expiry: expiryDate.toISOString(),
+            updated_at: new Date().toISOString()
         };
 
         if (plan === 'free') {
             profileUpdates.trial_used = true;
+            profileUpdates.trials_used_count = (profile?.current_used_count || 0) + 1;
             profileUpdates.trial_expires_at = expiryDate.toISOString();
         }
 
@@ -147,10 +160,15 @@ export async function activatePlan({ plan, userId, eventId, paymentId, processor
         if (profileError) {
             console.error('Error al actualizar perfil:', profileError);
             // Fallback upsert
-            await supabase.from('profiles').upsert({
+            const { error: upsertError } = await supabase.from('profiles').upsert({
                 id: userId,
                 ...profileUpdates,
+                trials_used_count: profileUpdates.trials_used_count || 0
             });
+            if (upsertError) {
+                console.error('Error in upsert fallback:', upsertError);
+                throw new Error('No se pudo actualizar el perfil de suscripción');
+            }
         }
 
         // 3. Si hay eventId específico, actualizar ese evento
@@ -161,17 +179,19 @@ export async function activatePlan({ plan, userId, eventId, paymentId, processor
                     plan,
                     max_photos: planInfo.max_photos === -1 ? 999999 : planInfo.max_photos,
                     is_active: true,
-                    // Si es free, el evento también hereda la expiración para el bloqueo de fotos
                     updated_at: new Date().toISOString() 
                 })
                 .eq('id', eventId)
                 .eq('user_id', userId);
 
-            if (eventError) throw eventError;
+            if (eventError) {
+                console.error('Error al actualizar evento:', eventError);
+                throw new Error('No se pudo vincular el plan al evento');
+            }
         }
 
         // 4. Registrar pago en la tabla payments
-        await supabase.from('payments').insert({
+        const { error: paymentError } = await supabase.from('payments').insert({
             user_id: userId,
             event_id: eventId || null,
             plan,
@@ -182,11 +202,16 @@ export async function activatePlan({ plan, userId, eventId, paymentId, processor
             status: 'completed',
         });
 
-        console.log(`✅ Plan "${plan}" activado exitosamente (Vence: ${expiryDate.toLocaleString()})`);
+        if (paymentError) {
+            console.error('Error al registrar pago:', paymentError);
+            // Non-critical error, we don't throw here as the plan IS activated in profile
+        }
+
+        console.log(`✅ Plan "${plan}" activado exitosamente (ID: ${userId})`);
         return true;
     } catch (err) {
-        console.error('Error al activar plan:', err);
-        return false;
+        console.error('Error en activatePlan:', err.message);
+        throw err; // Re-throw to be caught by route handler
     }
 }
 

@@ -34,13 +34,16 @@ const ProcessorLogo = ({ name, className = '' }) => {
 };
 
 export default function Pricing() {
-    const { user, getToken } = useAuth();
+    const { user, getToken, profile } = useAuth();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    
     const [processors, setProcessors] = useState([]);
     const [defaultProcessor, setDefaultProcessor] = useState('');
     const [selectedProcessor, setSelectedProcessor] = useState('');
     const [loadingPlan, setLoadingPlan] = useState(null);
+    const [freeTrialLimit, setFreeTrialLimit] = useState(1);
+    const [showTrialLimitModal, setShowTrialLimitModal] = useState(false);
 
     // Cargar procesadores habilitados
     useEffect(() => {
@@ -54,6 +57,7 @@ export default function Pricing() {
                 setProcessors(data.processors || envProcessors);
                 setDefaultProcessor(data.default || envProcessors[0]);
                 setSelectedProcessor(data.default || envProcessors[0]);
+                setFreeTrialLimit(data.free_trial_limit || 1);
             })
             .catch(() => {
                 // Fallback a env vars
@@ -67,6 +71,11 @@ export default function Pricing() {
         }
     }, [searchParams]);
 
+    const { profile } = useAuth();
+    const trialsUsed = profile?.trials_used_count || (profile?.trial_used ? 1 : 0);
+    const trialsRemaining = Math.max(0, freeTrialLimit - trialsUsed);
+    const hasTrialsLeft = trialsRemaining > 0;
+
     const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'annual'
 
     const handleCheckout = async (planId) => {
@@ -77,6 +86,11 @@ export default function Pricing() {
         }
 
         if (planId === 'free') {
+            if (!hasTrialsLeft) {
+                setShowTrialLimitModal(true);
+                return;
+            }
+
             setLoadingPlan('free');
             try {
                 const token = getToken();
@@ -84,7 +98,7 @@ export default function Pricing() {
                 toast.success('¡Plan Gratuito activado!');
                 navigate('/dashboard');
             } catch (err) {
-                toast.error('Error al activar plan gratuito');
+                toast.error(err.message || 'Error al activar plan gratuito');
             } finally {
                 setLoadingPlan(null);
             }
@@ -126,7 +140,9 @@ export default function Pricing() {
             name: 'Gratuito',
             price: { monthly: 0, annual: 0 },
             period: 'una vez',
-            description: 'Probá Foto Eventos.',
+            description: hasTrialsLeft 
+                ? `Te quedan ${trialsRemaining} prubas de 1 evento.`
+                : 'Ya usaste tus pruebas gratuitas.',
             icon: Star,
             gradient: 'from-gray-500 to-gray-600',
             features: [
@@ -138,8 +154,9 @@ export default function Pricing() {
                 { text: 'Descarga de fotos', included: false },
                 { text: 'Skins premium', included: false },
             ],
-            cta: 'Comenzar Gratis',
+            cta: hasTrialsLeft ? 'Comenzar Gratis' : 'Prueba Agotada',
             popular: false,
+            disabled: !hasTrialsLeft,
         },
         {
             id: 'pro',
@@ -323,9 +340,9 @@ export default function Pricing() {
                                     {/* CTA */}
                                     <button
                                         onClick={() => handleCheckout(plan.id)}
-                                        disabled={loadingPlan === plan.id}
-                                        className={`w-full py-3 rounded-xl font-semibold text-center flex items-center justify-center gap-2 transition-all disabled:opacity-60 ${plan.popular ? 'btn-primary' : 'btn-secondary'
-                                            }`}
+                                        disabled={loadingPlan === plan.id || (plan.id === 'free' && !hasTrialsLeft)}
+                                        className={`w-full py-3 rounded-xl font-semibold text-center flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed ${plan.popular ? 'btn-primary' : 'btn-secondary'
+                                            } ${plan.id === 'free' && !hasTrialsLeft ? 'bg-white/5 border-white/10 text-white/20 grayscale' : ''}`}
                                     >
                                         {loadingPlan === plan.id ? (
                                             <>
@@ -377,6 +394,53 @@ export default function Pricing() {
                     </motion.div>
                 </div>
             </main>
+
+            {/* Trial Limit Modal */}
+            <AnimatePresence>
+                {showTrialLimitModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowTrialLimitModal(false)}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative glass-dark max-w-md w-full p-8 rounded-3xl border border-white/10 shadow-2xl text-center"
+                        >
+                            <div className="w-20 h-20 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Crown className="w-10 h-10 text-amber-500" />
+                            </div>
+                            <h3 className="font-display text-2xl font-bold text-white mb-4">
+                                Límite de Pruebas Alcanzado
+                            </h3>
+                            <p className="text-white/60 mb-8 text-sm leading-relaxed">
+                                Foto Eventos ofrece un máximo de {freeTrialLimit} {freeTrialLimit === 1 ? 'prueba gratuita' : 'pruebas gratuitas'} por cuenta. 
+                                <br /><br />
+                                Ya has utilizado tus oportunidades. Para seguir creando eventos increíbles, te invitamos a suscribirte a uno de nuestros planes Pro o Premium.
+                            </p>
+                            <div className="space-y-4">
+                                <button
+                                    onClick={() => setShowTrialLimitModal(false)}
+                                    className="w-full py-4 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-2xl font-bold shadow-lg shadow-primary-500/20 hover:scale-[1.02] transition-transform"
+                                >
+                                    Ver Planes de Pago
+                                </button>
+                                <button
+                                    onClick={() => setShowTrialLimitModal(false)}
+                                    className="w-full py-3 text-white/40 hover:text-white transition-colors text-sm font-medium"
+                                >
+                                    Cerrar
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             <Footer />
         </div>

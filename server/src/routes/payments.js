@@ -22,6 +22,7 @@ router.get('/processors', (req, res) => {
     res.json({
         processors: getEnabledProcessors(),
         default: getDefaultProcessor(),
+        free_trial_limit: parseInt(process.env.FREE_TRIAL_LIMIT || '1'),
         plans: Object.entries(PLANS)
             .filter(([key]) => key !== 'free')
             .map(([key, plan]) => ({
@@ -110,7 +111,7 @@ router.post('/webhook/mercadopago', async (req, res) => {
  */
 router.post('/activate-free', authMiddleware, async (req, res) => {
     try {
-        const success = await activatePlan({
+        await activatePlan({
             plan: 'free',
             userId: req.user.id,
             eventId: '',
@@ -118,13 +119,10 @@ router.post('/activate-free', authMiddleware, async (req, res) => {
             processor: 'none',
         });
 
-        if (success) {
-            res.json({ message: 'Plan gratuito activado', activated: true });
-        } else {
-            res.status(500).json({ message: 'Error al activar plan gratuito' });
-        }
+        res.json({ message: 'Plan gratuito activado', activated: true });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        console.error('Error in activate-free route:', err.message);
+        res.status(500).json({ message: err.message || 'Error al activar plan gratuito' });
     }
 });
 

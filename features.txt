@@ -13,3 +13,9 @@ la version gratuita deberia durar solo 30 minutos y ser posible activarla solo u
 
 
 agregar una seccion cuando el usuario esta logueado, para mostrar sus pagos y facturas y la posibilidad de descargarlas
+
+agregar politicas de privacidad y terminos y condiciones que el usuario debe aceptar al registrarse y disponibles en el footer.
+
+----------Dudas:
+
+que pasa al activar un plan de forma anual? se deberia cobrar por adelantado el año y la suscripcion deberia pasar de periodicedad mensual a anual

@@ -24,11 +24,8 @@ function ProtectedRoute({ children }) {
 
     if (!user) return <Navigate to="/login" />;
 
-    // Solo redirigir si el perfil terminó de cargar y explícitamente no tiene plan
-    // Si el perfil es null pero no estamos cargando auth, esperamos un poco
-    if (!isDevMode && profile && (profile.subscription_plan === 'none' || profile.subscription_status === 'inactive')) {
-        return <Navigate to="/pricing?from=guard" />;
-    }
+    // Eliminamos la redirección automática a pricing para evitar bloqueos.
+    // El Dashboard y las otras páginas ya manejan sus propios avisos de suscripción.
 
     return children;
 }

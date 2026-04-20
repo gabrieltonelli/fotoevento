@@ -1,7 +1,7 @@
 {
     "name": "fotoevento-client",
     "private": true,
-    "version": "1.1.4",
+    "version": "1.1.10",
     "type": "module",
     "scripts": {
         "dev": "vite",

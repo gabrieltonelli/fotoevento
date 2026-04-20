@@ -115,10 +115,14 @@ export default function Pricing() {
             }, token);
 
             // Redirigir a la pasarela de pago
-            if (result.url) {
+            const isDev = import.meta.env.VITE_DEV_MODE === 'true';
+            
+            if (isDev && result.sandboxUrl) {
+                console.log('🛠️ [DevMode] Redirigiendo a Sandbox de MercadoPago');
+                window.location.href = result.sandboxUrl;
+            } else if (result.url) {
                 window.location.href = result.url;
             } else if (result.sandboxUrl) {
-                // MercadoPago sandbox para development
                 window.location.href = result.sandboxUrl;
             }
         } catch (err) {

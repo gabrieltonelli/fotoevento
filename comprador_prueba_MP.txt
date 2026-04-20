@@ -1,0 +1,11 @@
+comprador
+
+user: TESTUSER57030240
+pass: VpLArJv2Mk
+
+
+
+vendedor
+
+user: TESTUSER2037086533828056165
+pass: ny5u7FJDWO

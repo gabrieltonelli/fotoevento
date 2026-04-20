@@ -20,7 +20,7 @@ export const PLANS = {
         price: 0,
         currency: 'ARS',
         max_photos: parseInt(process.env.VITE_PLAN_FREE_MAX_PHOTOS || '50'),
-        max_events: 1,
+        max_events: parseInt(process.env.FREE_TRIAL_COUNT || process.env.FREE_TRIAL_LIMIT || '1'),
         features: `1 evento, hasta ${process.env.VITE_PLAN_FREE_MAX_PHOTOS || '50'} fotos, duración ${process.env.FREE_TRIAL_MINUTES || '30'} mins`,
         skins: ['classic-dark', 'classic-light'],
         watermark: true,
@@ -113,6 +113,8 @@ export async function activatePlan({ plan, userId, eventId, paymentId, processor
             expiryDate.setDate(expiryDate.getDate() + 30); // Paid plans default to 30 days
         }
 
+        let existingProfile = null;
+
         // 1. Obtener perfil actual para verificar trial (si es plan free)
         if (plan === 'free') {
             const { data: profile, error: fetchError } = await supabase
@@ -126,20 +128,23 @@ export async function activatePlan({ plan, userId, eventId, paymentId, processor
                 throw new Error('Error al verificar elegibilidad del plan gratuito');
             }
 
-            const limit = parseInt(process.env.FREE_TRIAL_LIMIT || '1');
+            const limit = parseInt(process.env.FREE_TRIAL_COUNT || process.env.FREE_TRIAL_LIMIT || '1');
             const used = profile?.trials_used_count || (profile?.trial_used ? 1 : 0);
 
             if (used >= limit) {
                 console.warn(`Usuario ${userId} ya utilizó sus ${limit} pruebas gratuitas.`);
-                throw new Error(`Has alcanzado el límite de ${limit} pruebas gratuitas permitidas para tu cuenta.`);
+                throw new Error(`Has alcanzado el límite de ${limit} ${limit === 1 ? 'prueba gratuita' : 'pruebas gratuitas'} permitidas para tu cuenta.`);
             }
 
             // Guardar el conteo actual para el incremento
-            profile.current_used_count = used;
+            if (profile) {
+                existingProfile = profile;
+                existingProfile.current_used_count = used;
+            }
         }
 
         // 2. Actualizar el perfil del usuario
-        const trialLimit = parseInt(process.env.FREE_TRIAL_LIMIT || '1');
+        const trialLimit = parseInt(process.env.FREE_TRIAL_COUNT || process.env.FREE_TRIAL_LIMIT || '1');
         const profileUpdates = {
             subscription_plan: plan,
             subscription_status: 'active',
@@ -149,7 +154,7 @@ export async function activatePlan({ plan, userId, eventId, paymentId, processor
 
         if (plan === 'free') {
             profileUpdates.trial_used = true;
-            profileUpdates.trials_used_count = (profile?.current_used_count || 0) + 1;
+            profileUpdates.trials_used_count = (existingProfile?.current_used_count || 0) + 1;
             profileUpdates.trial_expires_at = expiryDate.toISOString();
         }
 

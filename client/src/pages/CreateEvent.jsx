@@ -220,35 +220,6 @@ export default function CreateEvent() {
                             </div>
                         </div>
 
-                        {/* Plan Selection */}
-                        <div className="glass rounded-2xl p-6">
-                            <h3 className="font-display font-bold text-white flex items-center gap-2 mb-4">
-                                <Crown className="w-5 h-5 text-amber-400" />
-                                Seleccionar Plan
-                            </h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                {plans.map(p => (
-                                    <button
-                                        key={p.id}
-                                        type="button"
-                                        onClick={() => handleChange('plan', p.id)}
-                                        className={`p-4 rounded-xl border text-left transition-all ${form.plan === p.id
-                                                ? 'border-primary-500 bg-primary-500/10 ring-1 ring-primary-500'
-                                                : 'border-white/5 bg-white/5 hover:border-white/20'
-                                            }`}
-                                    >
-                                        <p className="text-xs font-bold text-primary-400 uppercase tracking-wider">{p.name}</p>
-                                        <p className="text-xl font-bold text-white mt-1">
-                                            {p.price === 0 ? 'Gratis' : `$${p.price.toLocaleString()}`}
-                                        </p>
-                                        <p className="text-xs text-white/40 mt-1 line-clamp-1">{p.desc}</p>
-                                        <div className="mt-4 pt-4 border-t border-white/5">
-                                            <p className="text-xs text-white/60">Límite: <span className="text-white font-bold">{p.photos} fotos</span></p>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
 
                         {/* Settings */}
                         <div className="glass rounded-2xl p-6 space-y-4">
@@ -326,7 +297,7 @@ export default function CreateEvent() {
                             
                             <h2 className="font-display text-2xl font-bold text-white mb-3">¡Límite de eventos alcanzado!</h2>
                             <p className="text-white/60 text-sm mb-8 leading-relaxed">
-                                Has completado tus {import.meta.env.VITE_FREE_TRIAL_LIMIT || '5'} eventos gratuitos. 
+                                Has completado tus {import.meta.env.VITE_FREE_TRIAL_COUNT || '5'} eventos gratuitos. 
                                 <br /><br />
                                 Mejorando a un plan **Pro** o **Premium** podrás crear eventos ilimitados, subir más fotos y personalizar la experiencia al máximo.
                             </p>

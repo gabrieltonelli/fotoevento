@@ -1,11 +1,23 @@
-comprador
 
+desde mi cuenta de mercado pago real, entrar a:
+https://www.mercadopago.com.ar/developers/panel/app/6563157353250737/test-users
+
+comprador
+idUser: 1632469786
 user: TESTUSER57030240
 pass: VpLArJv2Mk
+codigo verificacion: 469786
 
+5031 7557 3453 0604
+11/30
+123
 
+4509 9535 6623 3704
+11/30
+123
 
 vendedor
-
+idUser: 3346851664
 user: TESTUSER2037086533828056165
 pass: ny5u7FJDWO
+codigo verificacion: 851664

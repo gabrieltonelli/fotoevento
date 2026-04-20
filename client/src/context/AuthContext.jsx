@@ -140,7 +140,8 @@ export function AuthProvider({ children }) {
         const createdAt = new Date(event.created_at);
         const now = new Date();
         const diffInMinutes = (now - createdAt) / (1000 * 60);
-        return diffInMinutes > 30;
+        const trialMinutes = parseInt(import.meta.env.VITE_FREE_TRIAL_MINUTES || '30', 10);
+        return diffInMinutes > trialMinutes;
     }, []);
 
     const value = {

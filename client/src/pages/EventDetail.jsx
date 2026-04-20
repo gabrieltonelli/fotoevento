@@ -8,12 +8,13 @@ import {
     ArrowLeft, Monitor, QrCode, Copy, Download, Settings,
     Camera, Users, Calendar, MapPin, Share2, ExternalLink,
     Trash2, Power, PowerOff, Image as ImageIcon, Loader2, X, Crown,
-    Pencil, Check
+    Pencil, Check, Clock
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import toast from 'react-hot-toast';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import CountdownTimer from '../components/common/CountdownTimer';
 
 export default function EventDetail() {
     const { id } = useParams();
@@ -320,19 +321,48 @@ export default function EventDetail() {
                                 <>
                                     <div className="flex items-center gap-3 mb-2">
                                         <h1 className="font-display text-3xl font-bold text-white">{event.name}</h1>
-                                        {isEventBlocked ? (
-                                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400">
-                                                ○ Trial Vencido
-                                            </span>
-                                        ) : (
-                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${event.is_active ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-white/40'
-                                                }`}>
-                                                {event.is_active ? '● Activo' : '○ Inactivo'}
-                                            </span>
-                                        )}
+                                        
+                                        <div className="flex items-center gap-2">
+                                            {isEventBlocked ? (
+                                                <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400">
+                                                    ○ Trial Vencido
+                                                </span>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={async () => {
+                                                            try {
+                                                                const token = getToken();
+                                                                await api.updateEvent(event.id, { is_active: !event.is_active }, token);
+                                                                setEvent(prev => ({ ...prev, is_active: !prev.is_active }));
+                                                                toast.success(event.is_active ? 'Evento desactivado' : 'Evento activado');
+                                                            } catch (err) {
+                                                                toast.error('Error al cambiar estado del evento');
+                                                            }
+                                                        }}
+                                                        className={`p-2 rounded-xl transition-all ${
+                                                            event.is_active 
+                                                                ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20' 
+                                                                : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
+                                                        }`}
+                                                        title={event.is_active ? 'Desactivar Evento' : 'Activar Evento'}
+                                                    >
+                                                        <Power className="w-4 h-4" />
+                                                    </button>
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${event.is_active ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-white/40'}`}>
+                                                        {event.is_active ? 'Activo' : 'Inactivo'}
+                                                    </span>
+
+                                                    {event.plan === 'free' && !isEventBlocked && (
+                                                        <CountdownTimer createdAt={event.created_at} />
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
                                         <button
                                             onClick={() => setIsEditing(true)}
-                                            className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-all ml-2"
+                                            className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-all ml-1"
                                             title="Editar datos del evento"
                                         >
                                             <Pencil className="w-4 h-4" />

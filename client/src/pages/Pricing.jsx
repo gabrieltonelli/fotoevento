@@ -59,7 +59,7 @@ export default function Pricing() {
                 setProcessors(data.processors || envProcessors);
                 setDefaultProcessor(data.default || envProcessors[0]);
                 setSelectedProcessor(data.default || envProcessors[0]);
-                setFreeTrialLimit(data.free_trial_limit || 1);
+                setFreeTrialLimit(data.free_trial_limit || import.meta.env.VITE_FREE_TRIAL_COUNT || 1);
             });
 
         // Cargar conteo de eventos si el usuario está logueado
@@ -145,10 +145,10 @@ export default function Pricing() {
             price: { monthly: 0, annual: 0 },
             period: 'una vez',
             description: hasTrialsLeft && profile?.subscription_plan === 'free'
-                ? `Te quedan ${trialsRemaining} eventos de ${freeTrialLimit} disponibles.`
+                ? `Te ${trialsRemaining === 1 ? 'queda' : 'quedan'} ${trialsRemaining} ${trialsRemaining === 1 ? 'evento' : 'eventos'} de ${freeTrialLimit} disponibles.`
                 : profile?.subscription_plan !== 'free'
                     ? 'Ya tenés un plan superior activo.'
-                    : 'Ya usaste tus pruebas gratuitas.',
+                    : `Ya usaste tus ${freeTrialLimit} pruebas gratuitas. Para continuar, por favor selecciona un plan de pago.`,
             icon: Star,
             gradient: 'from-gray-500 to-gray-600',
             features: [
@@ -425,9 +425,9 @@ export default function Pricing() {
                                 Límite de Pruebas Alcanzado
                             </h3>
                             <p className="text-white/60 mb-8 text-sm leading-relaxed">
-                                Foto Eventos ofrece un máximo de {freeTrialLimit} {freeTrialLimit === 1 ? 'prueba gratuita' : 'pruebas gratuitas'} por cuenta. 
+                                Ya has alcanzado tu límite de ${freeTrialLimit} ${freeTrialLimit === 1 ? 'prueba gratuita' : 'pruebas gratuitas'} por cuenta. 
                                 <br /><br />
-                                Ya has utilizado tus oportunidades. Para seguir creando eventos increíbles, te invitamos a suscribirte a uno de nuestros planes Pro o Premium.
+                                Para seguir creando eventos increíbles, te invitamos a suscribirte a uno de nuestros planes Pro o Premium.
                             </p>
                             <div className="space-y-4">
                                 <button

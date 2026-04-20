@@ -56,7 +56,7 @@ router.post('/', authMiddleware, async (req, res) => {
                 .select('*', { count: 'exact', head: true })
                 .eq('user_id', req.user.id);
             
-            const trialLimit = parseInt(process.env.FREE_TRIAL_LIMIT || '1');
+            const trialLimit = parseInt(process.env.FREE_TRIAL_COUNT || process.env.FREE_TRIAL_LIMIT || '1');
             console.log('Events:', eventCount, 'Limit:', trialLimit);
 
             if (eventCount >= trialLimit) {

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import toast from 'react-hot-toast';
+import CountdownTimer from '../components/common/CountdownTimer';
 
 export default function Dashboard() {
     const { user, profile, signOut, getToken, isEventExpired } = useAuth();
@@ -73,7 +74,7 @@ export default function Dashboard() {
             setStats({
                 totalEvents: data.events?.length || 0,
                 totalPhotos: data.events?.reduce((sum, e) => sum + (e.photo_count || 0), 0) || 0,
-                activeEvents: data.events?.filter(e => e.is_active)?.length || 0,
+                activeEvents: data.events?.filter(e => e.is_active && !isEventExpired(e))?.length || 0,
             });
         } catch (err) {
             console.error('Error loading events:', err);
@@ -100,7 +101,7 @@ export default function Dashboard() {
         if (e) e.preventDefault();
         
         const isFree = profile?.subscription_plan === 'free' || !profile?.subscription_plan;
-        const trialLimit = parseInt(import.meta.env.VITE_FREE_TRIAL_LIMIT || '5', 10);
+        const trialLimit = parseInt(import.meta.env.VITE_FREE_TRIAL_COUNT || import.meta.env.VITE_FREE_TRIAL_LIMIT || '5', 10);
         
         if (isFree && events.length >= trialLimit) {
             setShowLimitModal(true);
@@ -302,9 +303,14 @@ export default function Dashboard() {
                                     </div>
 
                                     {event.plan === 'free' && (
-                                        <p className="text-[10px] text-white/20 mb-4 -mt-2">
-                                            * Los eventos gratuitos caducan a los {import.meta.env.VITE_FREE_TRIAL_MINUTES || '30'} minutos.
-                                        </p>
+                                        <div className="flex flex-col gap-2 mb-4 -mt-2">
+                                            <p className="text-[10px] text-white/20">
+                                                * Los eventos gratuitos caducan a los {import.meta.env.VITE_FREE_TRIAL_MINUTES || '30'} minutos.
+                                            </p>
+                                            {!isEventBlocked && (
+                                                <CountdownTimer createdAt={event.created_at} className="!bg-transparent !border-none !p-0 !text-[11px]" />
+                                            )}
+                                        </div>
                                     )}
 
                                     <div className="grid grid-cols-3 gap-3 mb-4">

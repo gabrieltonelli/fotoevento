@@ -1,6 +1,10 @@
 https://www.instagram.com/reel/DUtOfFMDpsG/
 
 
+Al crear un evento nuevo no tiene sentido la card "Seleccionar Plan"
+
+Para eventos gratuitos, mostrar cerca del badge Activo, una cuenta regresiva de cuanto tiempo queda para que finalice el trial basado en la variable de entorno FREE_TRIAL_MINUTES (en horas minutos y segundos)
+
 Durante la creacion de la cuenta luego del form de registro deberia pasar a elegir el plan y posterior a eso seleccionar el procesador de pago (mercadolibre o stripe) y lo tipico de seleccionar forma de pago etc.
 si no se detecta el pago, no deberia habilitarse el dashboard, salvo que haya elegido la version gratuita. Siempre verificar que el pago se haya realizado correctamente y que la suscripción no esté caducada.
 

@@ -22,7 +22,7 @@ router.get('/processors', (req, res) => {
     res.json({
         processors: getEnabledProcessors(),
         default: getDefaultProcessor(),
-        free_trial_limit: parseInt(process.env.FREE_TRIAL_LIMIT || '1'),
+        free_trial_limit: parseInt(process.env.FREE_TRIAL_COUNT || process.env.FREE_TRIAL_LIMIT || '1'),
         plans: Object.entries(PLANS)
             .filter(([key]) => key !== 'free')
             .map(([key, plan]) => ({

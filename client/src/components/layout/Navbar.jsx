@@ -1,11 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useState } from 'react';
-import { Camera, Menu, X, LogOut, LayoutDashboard, CreditCard } from 'lucide-react';
+import { Camera, Menu, X, LogOut, LayoutDashboard, CreditCard, Crown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Navbar() {
-    const { user, signOut } = useAuth();
+    const { user, profile, signOut } = useAuth();
     const [mobileOpen, setMobileOpen] = useState(false);
     const navigate = useNavigate();
 
@@ -48,6 +48,18 @@ export default function Navbar() {
                                     <LayoutDashboard className="w-4 h-4" />
                                     Dashboard
                                 </Link>
+                                {profile?.subscription_status === 'active' && (
+                                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm border ${
+                                        profile.subscription_plan === 'premium' 
+                                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
+                                            : profile.subscription_plan === 'pro'
+                                                ? 'bg-primary-500/10 text-primary-400 border-primary-500/20'
+                                                : 'bg-white/5 text-white/40 border-white/10'
+                                    }`}>
+                                        {profile.subscription_plan === 'premium' && <Crown className="w-3 h-3" />}
+                                        Plan {profile.subscription_plan}
+                                    </div>
+                                )}
                                 <Link to="/billing" className="flex items-center gap-2 btn-ghost text-sm">
                                     <CreditCard className="w-4 h-4" />
                                     Facturación

@@ -34,10 +34,10 @@ const ProcessorLogo = ({ name, className = '' }) => {
 };
 
 export default function Pricing() {
-    const { user, getToken, profile } = useAuth();
+    const { user, profile, getToken, refreshProfile } = useAuth();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    
+
     const [processors, setProcessors] = useState([]);
     const [defaultProcessor, setDefaultProcessor] = useState('');
     const [selectedProcessor, setSelectedProcessor] = useState('');
@@ -96,6 +96,7 @@ export default function Pricing() {
                 const token = getToken();
                 await api.activateFreePlan(token);
                 toast.success('¡Plan Gratuito activado!');
+                refreshProfile();
                 navigate('/dashboard');
             } catch (err) {
                 toast.error(err.message || 'Error al activar plan gratuito');
@@ -116,7 +117,7 @@ export default function Pricing() {
 
             // Redirigir a la pasarela de pago
             const isDev = import.meta.env.VITE_DEV_MODE === 'true';
-            
+
             if (isDev && result.sandboxUrl) {
                 console.log('🛠️ [DevMode] Redirigiendo a Sandbox de MercadoPago');
                 window.location.href = result.sandboxUrl;
@@ -138,6 +139,20 @@ export default function Pricing() {
     const proPrice = parseInt(import.meta.env.VITE_PLAN_PRO_PRICE || '4990');
     const premiumPrice = parseInt(import.meta.env.VITE_PLAN_PREMIUM_PRICE || '9990');
 
+    const getPlanStatus = (planId) => {
+        if (!profile?.subscription_plan) {
+            return planId === 'free' ? 'upgrade' : 'upgrade';
+        }
+
+        const planWeights = { 'free': 0, 'pro': 1, 'premium': 2 };
+        const currentWeight = planWeights[profile.subscription_plan] ?? 0;
+        const targetWeight = planWeights[planId] ?? 0;
+
+        if (profile.subscription_plan === planId) return 'current';
+        if (targetWeight < currentWeight) return 'downgrade';
+        return 'upgrade';
+    };
+
     const plans = [
         {
             id: 'free',
@@ -155,14 +170,16 @@ export default function Pricing() {
                 { text: '1 evento', included: true },
                 { text: `Hasta ${freeMaxPhotos} fotos`, included: true },
                 { text: `Dura ${trialMinutes} minutos`, included: true },
-                { text: 'Pantalla en vivo', included: true },
                 { text: 'QR + código corto', included: true },
                 { text: 'Descarga de fotos', included: false },
+                { text: 'Moderación IA', included: false },
                 { text: 'Skins premium', included: false },
             ],
-            cta: hasTrialsLeft ? 'Comenzar Gratis' : 'Prueba Agotada',
+            cta: getPlanStatus('free') === 'current' ? 'Plan Actual' :
+                getPlanStatus('free') === 'downgrade' ? 'Plan Inferior' :
+                    (hasTrialsLeft ? 'Comenzar Gratis' : 'Prueba Agotada'),
             popular: false,
-            disabled: !hasTrialsLeft,
+            disabled: getPlanStatus('free') === 'current' || getPlanStatus('free') === 'downgrade' || !hasTrialsLeft,
         },
         {
             id: 'pro',
@@ -175,14 +192,15 @@ export default function Pricing() {
             features: [
                 { text: 'Eventos ilimitados', included: true },
                 { text: `Hasta ${proMaxPhotos} fotos`, included: true },
-                { text: 'Pantalla en vivo', included: true },
                 { text: 'QR + código corto', included: true },
                 { text: 'Moderación IA', included: true },
                 { text: 'Descarga de fotos', included: true },
                 { text: 'Skins premium', included: true },
             ],
-            cta: 'Elegir Pro',
+            cta: getPlanStatus('pro') === 'current' ? 'Plan Actual' :
+                getPlanStatus('pro') === 'downgrade' ? 'Plan Inferior' : 'Elegir Pro',
             popular: true,
+            disabled: getPlanStatus('pro') === 'current' || getPlanStatus('pro') === 'downgrade',
         },
         {
             id: 'premium',
@@ -195,15 +213,16 @@ export default function Pricing() {
             features: [
                 { text: 'Eventos ilimitados', included: true },
                 { text: 'Fotos ilimitadas', included: true },
-                { text: 'Pantalla en vivo', included: true },
                 { text: 'QR + código corto', included: true },
                 { text: 'Moderación IA', included: true },
                 { text: 'Descarga de fotos', included: true },
                 { text: 'Todos los skins', included: true },
                 { text: 'Sin marca de agua', included: true },
             ],
-            cta: 'Elegir Premium',
+            cta: getPlanStatus('premium') === 'current' ? 'Plan Actual' :
+                getPlanStatus('premium') === 'downgrade' ? 'Plan Inferior' : 'Elegir Premium',
             popular: false,
+            disabled: getPlanStatus('premium') === 'current' || getPlanStatus('premium') === 'downgrade',
         },
     ];
 
@@ -346,9 +365,10 @@ export default function Pricing() {
                                     {/* CTA */}
                                     <button
                                         onClick={() => handleCheckout(plan.id)}
-                                        disabled={loadingPlan === plan.id || (plan.id === 'free' && !hasTrialsLeft)}
+                                        disabled={loadingPlan === plan.id || plan.disabled}
                                         className={`w-full py-3 rounded-xl font-semibold text-center flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed ${plan.popular ? 'btn-primary' : 'btn-secondary'
-                                            } ${plan.id === 'free' && !hasTrialsLeft ? 'bg-white/5 border-white/10 text-white/20 grayscale' : ''}`}
+                                            } ${plan.disabled && plan.id === 'free' ? 'bg-white/5 border-white/10 text-white/20 grayscale' : ''} ${getPlanStatus(plan.id) === 'current' ? '!bg-green-500/10 !text-green-400 !border-green-500/20' : ''
+                                            }`}
                                     >
                                         {loadingPlan === plan.id ? (
                                             <>
@@ -425,7 +445,7 @@ export default function Pricing() {
                                 Límite de Pruebas Alcanzado
                             </h3>
                             <p className="text-white/60 mb-8 text-sm leading-relaxed">
-                                Ya has alcanzado tu límite de ${freeTrialLimit} ${freeTrialLimit === 1 ? 'prueba gratuita' : 'pruebas gratuitas'} por cuenta. 
+                                Ya has alcanzado tu límite de ${freeTrialLimit} ${freeTrialLimit === 1 ? 'prueba gratuita' : 'pruebas gratuitas'} por cuenta.
                                 <br /><br />
                                 Para seguir creando eventos increíbles, te invitamos a suscribirte a uno de nuestros planes Pro o Premium.
                             </p>

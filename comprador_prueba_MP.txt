@@ -21,3 +21,6 @@ idUser: 3346851664
 user: TESTUSER2037086533828056165
 pass: ny5u7FJDWO
 codigo verificacion: 851664
+Client ID: 7234409815185403
+Client Secret: BL0tBYmh3sJupJwS4DtJUVLeQtzma1pf
+

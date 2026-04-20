@@ -14,7 +14,7 @@ import toast from 'react-hot-toast';
 import CountdownTimer from '../components/common/CountdownTimer';
 
 export default function Dashboard() {
-    const { user, profile, signOut, getToken, isEventExpired } = useAuth();
+    const { user, profile, signOut, getToken, isEventExpired, refreshProfile } = useAuth();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [events, setEvents] = useState([]);
@@ -47,8 +47,9 @@ export default function Dashboard() {
                         }
                         // Limpiar query params
                         setSearchParams({});
-                        // Recargar eventos
+                        // Recargar eventos y perfil
                         loadEvents();
+                        refreshProfile();
                     })
                     .catch(() => {
                         toast.success('¡Pago recibido! Tu plan se activará en breve.');

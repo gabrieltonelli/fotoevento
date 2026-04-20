@@ -1,35 +1,33 @@
 import serverless from 'serverless-http';
+import express from 'express';
+import cors from 'cors';
 
-let cachedHandler;
+// Importar rutas directamente
+import eventRoutes from '../../server/src/routes/events.js';
+import photoRoutes from '../../server/src/routes/photos.js';
+import paymentRoutes from '../../server/src/routes/payments.js';
+import publicRoutes from '../../server/src/routes/public.js';
+import profileRoutes from '../../server/src/routes/profile.js';
 
-async function getHandler() {
-  if (cachedHandler) return cachedHandler;
-  
-  try {
-    // Importación dinámica del servidor
-    const appModule = await import('../../server/src/index.js');
-    const app = appModule.default;
-    cachedHandler = serverless(app);
-    console.log('✅ Server loaded successfully in Netlify Function');
-    return cachedHandler;
-  } catch (err) {
-    console.error('❌ FATAL: Failed to load server app:', err.message);
-    throw err;
-  }
-}
+const app = express();
 
-export const handler = async (event, context) => {
-  try {
-    const serverlessHandler = await getHandler();
-    return await serverlessHandler(event, context);
-  } catch (error) {
-    console.error('RUNTIME ERROR:', error);
-    return {
-      statusCode: 502,
-      body: JSON.stringify({ 
-        error: 'Backend Initialization Error', 
-        message: error.message 
-      })
-    };
-  }
-};
+// Middleware básico
+app.use(cors({
+    origin: '*', // Permitir todo en serverless, manejado por Netlify
+    credentials: true,
+}));
+app.use(express.json());
+
+// Routes (Mantenemos el prefijo /api porque la redirección de Netlify lo incluye)
+app.use('/api/events', eventRoutes);
+app.use('/api/events', photoRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/public', publicRoutes);
+app.use('/api/profile', profileRoutes);
+
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', environment: 'netlify-lambda' });
+});
+
+// Exportar handler
+export const handler = serverless(app);

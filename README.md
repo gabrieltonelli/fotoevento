@@ -203,7 +203,8 @@ Esto inicia:
 - Habilitado dinámicamente según `PAYMENT_PROCESSORS` en `.env`
 - Checkout real con redirect a la pasarela seleccionada
 - Activación automática del plan al volver del pago exitoso
-- **Sistema de Pruebas Gratuitas**: Configurable por cuenta (`FREE_TRIAL_LIMIT`), con tracking en DB y bloqueo automático al agotar intentos.
+- **Sistema de Pruebas Gratuitas**: Configurable por cuenta (`VITE_FREE_TRIAL_LIMIT`), con tracking individual por cada evento. Cada evento gratuito tiene una duración limitada configurable (`VITE_FREE_TRIAL_MINUTES`).
+- **Bloqueo Automático**: Bloqueo visual y funcional (subidas/descargas) tras el vencimiento de la prueba de cada evento.
 - **Facturación Flexible**: Soporte para ciclos mensuales y anuales con descuentos configurables.
 
 ---

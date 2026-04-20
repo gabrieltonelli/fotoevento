@@ -76,6 +76,8 @@ export function AuthProvider({ children }) {
     const signUp = async (email, password, fullName) => {
         if (DEV_MODE) {
             console.log('🛠️ [DevMode] signUp simulado:', email);
+            setSession(DEV_SESSION);
+            setUser(DEV_USER);
             return { data: { user: DEV_USER, session: DEV_SESSION }, error: null };
         }
         const { data, error } = await supabase.auth.signUp({
@@ -91,6 +93,8 @@ export function AuthProvider({ children }) {
     const signIn = async (email, password) => {
         if (DEV_MODE) {
             console.log('🛠️ [DevMode] signIn simulado:', email);
+            setSession(DEV_SESSION);
+            setUser(DEV_USER);
             return { data: { user: DEV_USER, session: DEV_SESSION }, error: null };
         }
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -100,7 +104,9 @@ export function AuthProvider({ children }) {
     const signInWithGoogle = async () => {
         if (DEV_MODE) {
             console.log('🛠️ [DevMode] Google login simulado');
-            return { data: { user: DEV_USER }, error: null };
+            setSession(DEV_SESSION);
+            setUser(DEV_USER);
+            return { data: { user: DEV_USER, session: DEV_SESSION }, error: null };
         }
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
@@ -112,10 +118,15 @@ export function AuthProvider({ children }) {
     const signOut = async () => {
         if (DEV_MODE) {
             console.log('🛠️ [DevMode] signOut simulado');
-            // En dev mode, no cerramos la sesión para no perder el acceso
+            setSession(null);
+            setUser(null);
+            setProfile(null);
             return { error: null };
         }
         const { error } = await supabase.auth.signOut();
+        setSession(null);
+        setUser(null);
+        setProfile(null);
         return { error };
     };
 
@@ -124,11 +135,13 @@ export function AuthProvider({ children }) {
         return session?.access_token;
     }, [session]);
 
-    const isTrialExpired = useCallback(() => {
-        if (!profile || profile.subscription_plan !== 'free') return false;
-        if (!profile.trial_expires_at) return false;
-        return new Date() > new Date(profile.trial_expires_at);
-    }, [profile]);
+    const isEventExpired = useCallback((event) => {
+        if (!event || event.plan !== 'free') return false;
+        const createdAt = new Date(event.created_at);
+        const now = new Date();
+        const diffInMinutes = (now - createdAt) / (1000 * 60);
+        return diffInMinutes > 30;
+    }, []);
 
     const value = {
         user,
@@ -141,7 +154,7 @@ export function AuthProvider({ children }) {
         signOut,
         getToken,
         refreshProfile,
-        isTrialExpired,
+        isEventExpired,
         isDevMode: DEV_MODE,
     };
 

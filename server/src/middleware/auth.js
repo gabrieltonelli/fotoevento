@@ -1,12 +1,8 @@
+import './../loadEnv.js';
 import { supabase } from '../services/supabase.js';
-import dotenv from 'dotenv';
-// Only load dotenv in non-production environments
-if (process.env.NODE_ENV !== 'production') {
-    dotenv.config();
-}
 
 // ─── Modo Desarrollo ───
-const DEV_MODE = process.env.VITE_DEV_MODE === 'true';
+const DEV_MODE = process.env.VITE_DEV_MODE === 'true' || process.env.DEV_MODE === 'true';
 let resolvedDevUser = null;
 
 async function getDevUser() {
@@ -71,7 +67,10 @@ export async function authMiddleware(req, res, next) {
         if (token === 'dev-token-fotoevento' || !authHeader) {
             req.user = await getDevUser();
             req.token = 'dev-token-fotoevento';
+            // console.log(`🛠️ [Auth] Bypass exitoso (${req.user.email})`);
             return next();
+        } else {
+            console.warn(`🛠️ [Auth] DEV_MODE activo pero se recibió un token diferente: ${token?.substring(0, 10)}...`);
         }
     }
 

@@ -14,8 +14,12 @@ async function fetchAPI(endpoint, options = {}) {
     const response = await fetch(url, config);
 
     if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Error de red' }));
-        throw new Error(error.message || `HTTP ${response.status}`);
+        const errorData = await response.json().catch(() => ({ message: 'Error de red' }));
+        const error = new Error(errorData.message || `HTTP ${response.status}`);
+        // Copiar flags importantes al objeto de error
+        if (errorData.limit_reached) error.limit_reached = true;
+        if (errorData.trial_expired) error.trial_expired = true;
+        throw error;
     }
 
     return response.json();
@@ -63,8 +67,10 @@ export const api = {
         });
 
         if (!response.ok) {
-            const error = await response.json().catch(() => ({ message: 'Error al subir foto' }));
-            throw new Error(error.message);
+            const errorData = await response.json().catch(() => ({ message: 'Error al subir foto' }));
+            const error = new Error(errorData.message || 'Error al subir foto');
+            if (errorData.trial_expired) error.trial_expired = true;
+            throw error;
         }
         return response.json();
     },

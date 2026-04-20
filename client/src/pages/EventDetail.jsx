@@ -17,7 +17,7 @@ import { saveAs } from 'file-saver';
 
 export default function EventDetail() {
     const { id } = useParams();
-    const { getToken, isTrialExpired, refreshProfile } = useAuth();
+    const { getToken, isEventExpired, refreshProfile } = useAuth();
     const navigate = useNavigate();
     const qrRef = useRef(null);
 
@@ -32,6 +32,8 @@ export default function EventDetail() {
     const [isDownloadingAll, setIsDownloadingAll] = useState(false);
 
     const pageSize = parseInt(import.meta.env.VITE_DASHBOARD_PAGE_SIZE || '24', 10);
+    
+    const isEventBlocked = (event && event.plan === 'free' && isEventExpired(event)) || false;
 
     const loadEvent = useCallback(async () => {
         try {
@@ -98,7 +100,7 @@ export default function EventDetail() {
     }, [event, pagination.page, pageSize]);
 
     const handleDownloadAll = useCallback(async () => {
-        if (isTrialExpired()) {
+        if (isEventBlocked) {
             toast.error('Tu tiempo de prueba gratuito ha expirado. Mejorá tu plan para descargar todas las fotos.', {
                 duration: 5000,
                 icon: '⏳'
@@ -148,13 +150,13 @@ export default function EventDetail() {
         } finally {
             setIsDownloadingAll(false);
         }
-    }, [event, isTrialExpired, navigate]);
+    }, [event, isEventBlocked, navigate]);
 
     const downloadSingle = useCallback(async (e, photo) => {
         e.stopPropagation();
 
-        if (isTrialExpired()) {
-            toast.error('Sesión expirada. Mejorá tu plan para descargar fotos.', { icon: '⏳' });
+        if (isEventBlocked) {
+            toast.error('Prueba vencida. Mejorá tu plan para descargar fotos.', { icon: '⏳' });
             navigate('/pricing');
             return;
         }
@@ -166,7 +168,7 @@ export default function EventDetail() {
         } catch (err) {
             toast.error('Error al descargar la foto');
         }
-    }, [isTrialExpired, navigate]);
+    }, [isEventBlocked, navigate]);
 
     const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
     const uploadUrl = event ? `${appUrl}/e/${event.short_code}` : '';
@@ -318,10 +320,16 @@ export default function EventDetail() {
                                 <>
                                     <div className="flex items-center gap-3 mb-2">
                                         <h1 className="font-display text-3xl font-bold text-white">{event.name}</h1>
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${event.is_active ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-white/40'
-                                            }`}>
-                                            {event.is_active ? '● Activo' : '○ Inactivo'}
-                                        </span>
+                                        {isEventBlocked ? (
+                                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400">
+                                                ○ Trial Vencido
+                                            </span>
+                                        ) : (
+                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${event.is_active ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-white/40'
+                                                }`}>
+                                                {event.is_active ? '● Activo' : '○ Inactivo'}
+                                            </span>
+                                        )}
                                         <button
                                             onClick={() => setIsEditing(true)}
                                             className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-all ml-2"
@@ -339,11 +347,29 @@ export default function EventDetail() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2 shrink-0">
-                            <a href={screenUrl} target="_blank" rel="noopener noreferrer" className="btn-primary flex items-center gap-2 !text-sm">
+                            <a
+                                href={isEventBlocked ? '#' : screenUrl}
+                                onClick={(e) => isEventBlocked && e.preventDefault()}
+                                target={isEventBlocked ? '_self' : '_blank'}
+                                rel="noopener noreferrer"
+                                className={`flex items-center gap-2 !text-sm ${isEventBlocked
+                                    ? 'px-4 py-2 rounded-xl bg-white/5 text-white/20 cursor-not-allowed border border-white/5'
+                                    : 'btn-primary'
+                                    }`}
+                            >
                                 <Monitor className="w-4 h-4" />
                                 Abrir Pantalla
                             </a>
-                            <a href={uploadUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary flex items-center gap-2 !text-sm">
+                            <a
+                                href={isEventBlocked ? '#' : uploadUrl}
+                                onClick={(e) => isEventBlocked && e.preventDefault()}
+                                target={isEventBlocked ? '_self' : '_blank'}
+                                rel="noopener noreferrer"
+                                className={`flex items-center gap-2 !text-sm ${isEventBlocked
+                                    ? 'px-4 py-2 rounded-xl bg-white/5 text-white/20 cursor-not-allowed border border-white/5'
+                                    : 'btn-secondary'
+                                    }`}
+                            >
                                 <ExternalLink className="w-4 h-4" />
                                 Ver Upload
                             </a>
@@ -475,18 +501,18 @@ export default function EventDetail() {
                                     <button
                                         onClick={handleDownloadAll}
                                         disabled={isDownloadingAll}
-                                        className={`btn-secondary flex items-center gap-2 !text-xs !py-2 ${isTrialExpired() ? '!bg-amber-500/10 !text-amber-500 !border-amber-500/50 hover:!bg-amber-500/20' : ''
+                                        className={`btn-secondary flex items-center gap-2 !text-xs !py-2 ${isEventBlocked ? '!bg-amber-500/10 !text-amber-500 !border-amber-500/50 hover:!bg-amber-500/20' : ''
                                             }`}
-                                        title={isTrialExpired() ? 'Requiere plan PRO o superior' : 'Descargar todas las fotos'}
+                                        title={isEventBlocked ? 'Requiere plan PRO o superior' : 'Descargar todas las fotos'}
                                     >
                                         {isDownloadingAll ? (
                                             <Loader2 className="w-4 h-4 animate-spin" />
-                                        ) : isTrialExpired() ? (
+                                        ) : isEventBlocked ? (
                                             <Crown className="w-4 h-4" />
                                         ) : (
                                             <Download className="w-4 h-4" />
                                         )}
-                                        {isTrialExpired() ? 'Mejorar para plan para Descargar Todas' : 'Descargar todas'}
+                                        {isEventBlocked ? 'Mejorar plan para descargar todo' : 'Descargar todas'}
                                     </button>
                                 )}
                             </div>
@@ -515,11 +541,11 @@ export default function EventDetail() {
                                                     <div className="absolute top-2 right-2">
                                                         <button
                                                             onClick={(e) => downloadSingle(e, photo)}
-                                                            className={`p-2 rounded-lg text-white transition-colors ${isTrialExpired() ? 'bg-amber-500/90 hover:bg-amber-600' : 'bg-white/10 hover:bg-white/20'
+                                                            className={`p-2 rounded-lg text-white transition-colors ${isEventBlocked ? 'bg-amber-500/90 hover:bg-amber-600' : 'bg-white/10 hover:bg-white/20'
                                                                 }`}
-                                                            title={isTrialExpired() ? 'Mejorar plan para descargar' : 'Descargar foto'}
+                                                            title={isEventBlocked ? 'Mejorar plan para descargar' : 'Descargar foto'}
                                                         >
-                                                            {isTrialExpired() ? <Crown className="w-4 h-4" /> : <Download className="w-4 h-4" />}
+                                                            {isEventBlocked ? <Crown className="w-4 h-4" /> : <Download className="w-4 h-4" />}
                                                         </button>
                                                     </div>
                                                     <div className="absolute bottom-2 left-2 text-xs text-white/80 font-medium bg-black/40 px-2 py-1 rounded-md">
@@ -586,12 +612,12 @@ export default function EventDetail() {
                                 <div className="w-px h-4 bg-white/20" />
                                 <button
                                     onClick={(e) => downloadSingle(e, selectedPhoto)}
-                                    className={`transition-colors flex items-center gap-1 ${isTrialExpired() ? 'text-amber-500 font-bold hover:text-amber-400' : 'hover:text-primary-400'
+                                    className={`transition-colors flex items-center gap-1 ${isEventBlocked ? 'text-amber-500 font-bold hover:text-amber-400' : 'hover:text-primary-400'
                                         }`}
-                                    title={isTrialExpired() ? 'Mejorar plan para descargar' : 'Descargar'}
+                                    title={isEventBlocked ? 'Mejorar plan para descargar' : 'Descargar'}
                                 >
-                                    {isTrialExpired() ? <Crown className="w-4 h-4" /> : <Download className="w-4 h-4" />}
-                                    {isTrialExpired() ? 'Mejorar para plan para Descargar' : 'Descargar'}
+                                    {isEventBlocked ? <Crown className="w-4 h-4" /> : <Download className="w-4 h-4" />}
+                                    {isEventBlocked ? 'Mejorar plan para descargar' : 'Descargar'}
                                 </button>
                             </div>
                             <button

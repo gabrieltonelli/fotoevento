@@ -2,24 +2,25 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plus, Calendar, Camera, Users, Settings, Trash2,
     QrCode, Monitor, BarChart3, Image as ImageIcon,
     LogOut, ChevronRight, Eye, EyeOff, CheckCircle, Crown,
-    ArrowUpCircle, Power
+    ArrowUpCircle, Power, Clock, X
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import toast from 'react-hot-toast';
 
 export default function Dashboard() {
-    const { user, profile, signOut, getToken, isTrialExpired } = useAuth();
+    const { user, profile, signOut, getToken, isEventExpired } = useAuth();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ totalEvents: 0, totalPhotos: 0, activeEvents: 0 });
     const [paymentSuccess, setPaymentSuccess] = useState(false);
+    const [showLimitModal, setShowLimitModal] = useState(false);
 
     // Detectar retorno de pasarela de pago y activar plan automáticamente
     useEffect(() => {
@@ -94,6 +95,19 @@ export default function Dashboard() {
             toast.error('Error al actualizar el estado');
         }
     };
+    
+    const handleNewEventClick = (e) => {
+        if (e) e.preventDefault();
+        
+        const isFree = profile?.subscription_plan === 'free' || !profile?.subscription_plan;
+        const trialLimit = parseInt(import.meta.env.VITE_FREE_TRIAL_LIMIT || '5', 10);
+        
+        if (isFree && events.length >= trialLimit) {
+            setShowLimitModal(true);
+        } else {
+            navigate('/events/new');
+        }
+    };
 
     const hasPremium = events.some(e => e.plan === 'premium');
 
@@ -120,27 +134,6 @@ export default function Dashboard() {
             <Navbar />
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">
-                {/* Trial Expired Warning */}
-                {profile?.subscription_plan === 'free' && isTrialExpired() && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="mb-8 p-6 rounded-2xl bg-red-500/10 border border-red-500/30 flex flex-col md:flex-row items-center justify-between gap-6"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                                <Clock className="w-6 h-6 text-red-400" />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-white">Tu período de prueba ha vencido</h3>
-                                <p className="text-red-400/70 text-sm">Tus eventos han sido desactivados. Mejorá tu plan para seguir capturando momentos vivos.</p>
-                            </div>
-                        </div>
-                        <Link to="/pricing" className="btn-primary !bg-red-500 !hover:bg-red-600 !border-none whitespace-nowrap">
-                            Mejorar Plan Ahora
-                        </Link>
-                    </motion.div>
-                )}
 
                 {/* Payment Success Banner */}
                 {paymentSuccess && (
@@ -168,10 +161,10 @@ export default function Dashboard() {
                         </h1>
                         <p className="text-white/50 mt-1">Gestioná tus eventos desde aquí.</p>
                     </div>
-                    <Link to="/events/new" className="btn-primary flex items-center gap-2">
+                    <button onClick={handleNewEventClick} className="btn-primary flex items-center gap-2">
                         <Plus className="w-5 h-5" />
                         Nuevo Evento
-                    </Link>
+                    </button>
                 </div>
 
                 {/* Upgrade Plan Banner */}
@@ -252,48 +245,67 @@ export default function Dashboard() {
                             <Camera className="w-16 h-16 text-white/10 mx-auto mb-4" />
                             <h3 className="font-display text-xl font-bold text-white mb-2">Aún no tenés eventos</h3>
                             <p className="text-white/40 mb-6">Creá tu primer evento y empezá a recibir fotos en vivo.</p>
-                            <Link to="/events/new" className="btn-primary inline-flex items-center gap-2">
+                            <button onClick={handleNewEventClick} className="btn-primary inline-flex items-center gap-2">
                                 <Plus className="w-5 h-5" />
                                 Crear Evento
-                            </Link>
+                            </button>
                         </motion.div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {events.map((event, i) => (
-                                <motion.div
+                            {events.map((event, i) => {
+                                const isEventBlocked = event.plan === 'free' && isEventExpired(event);
+                                return (
+                                    <motion.div
                                     key={event.id}
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: i * 0.1 }}
-                                    className="glass rounded-2xl p-6 hover:bg-white/10 transition-all group cursor-pointer"
+                                    className={`glass rounded-2xl p-6 transition-all group cursor-pointer ${
+                                        isEventBlocked 
+                                            ? 'opacity-60 grayscale-[0.5] hover:bg-white/5' 
+                                            : 'hover:bg-white/10'
+                                    }`}
                                     onClick={() => navigate(`/events/${event.id}`)}
                                 >
                                     <div className="flex items-start justify-between mb-4">
                                         <div className="flex items-center gap-3">
                                             <span className="text-2xl">{eventTypeEmoji[event.type] || '📷'}</span>
                                             <div>
-                                                <h3 className="font-display font-bold text-white group-hover:text-primary-300 transition-colors">{event.name}</h3>
+                                                <h3 className="font-display font-bold text-white group-hover:text-primary-300 transition-colors">
+                                                    {event.name}
+                                                </h3>
                                                 <p className="text-xs text-white/40">{eventTypeLabel[event.type] || event.type}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={(e) => toggleEventActive(e, event.id, event.is_active)}
-                                                className={`p-2 rounded-xl transition-all ${
-                                                    event.is_active 
-                                                        ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20' 
-                                                        : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
-                                                }`}
-                                                title={event.is_active ? 'Desactivar Evento' : 'Activar Evento'}
-                                            >
-                                                <Power className="w-4 h-4" />
-                                            </button>
-                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${event.is_active ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-white/40'
+                                            {!isEventBlocked ? (
+                                                <button
+                                                    onClick={(e) => toggleEventActive(e, event.id, event.is_active)}
+                                                    className={`p-2 rounded-xl transition-all ${
+                                                        event.is_active 
+                                                            ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20' 
+                                                            : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
+                                                    }`}
+                                                    title={event.is_active ? 'Desactivar Evento' : 'Activar Evento'}
+                                                >
+                                                    <Power className="w-4 h-4" />
+                                                </button>
+                                            ) : null}
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                isEventBlocked
+                                                    ? 'bg-red-500/10 text-red-400'
+                                                    : event.is_active ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-white/40'
                                                 }`}>
-                                                {event.is_active ? 'Activo' : 'Inactivo'}
+                                                {isEventBlocked ? 'Trial Vencido' : (event.is_active ? 'Activo' : 'Inactivo')}
                                             </span>
                                         </div>
                                     </div>
+
+                                    {event.plan === 'free' && (
+                                        <p className="text-[10px] text-white/20 mb-4 -mt-2">
+                                            * Los eventos gratuitos caducan a los {import.meta.env.VITE_FREE_TRIAL_MINUTES || '30'} minutos.
+                                        </p>
+                                    )}
 
                                     <div className="grid grid-cols-3 gap-3 mb-4">
                                         <div className="text-center">
@@ -318,11 +330,67 @@ export default function Dashboard() {
                                         <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-primary-400 transition-colors" />
                                     </div>
                                 </motion.div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
             </main>
+
+            {/* Limit Reached Modal */}
+            <AnimatePresence>
+                {showLimitModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowLimitModal(false)}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative w-full max-w-md glass rounded-3xl p-8 text-center border border-white/10"
+                        >
+                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400/20 to-orange-500/20 flex items-center justify-center mx-auto mb-6">
+                                <Crown className="w-10 h-10 text-amber-400" />
+                            </div>
+                            
+                            <h2 className="font-display text-2xl font-bold text-white mb-3">¡Límite de eventos alcanzado!</h2>
+                            <p className="text-white/60 text-sm mb-8 leading-relaxed">
+                                Has completado tus {import.meta.env.VITE_FREE_TRIAL_LIMIT || '5'} eventos gratuitos. 
+                                <br /><br />
+                                Mejorando a un plan **Pro** o **Premium** podrás crear eventos ilimitados, subir más fotos y personalizar la experiencia al máximo.
+                            </p>
+
+                            <div className="flex flex-col gap-3">
+                                <Link
+                                    to="/pricing"
+                                    className="w-full btn-primary !bg-gradient-to-r !from-amber-400 !to-orange-500 !border-none text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2"
+                                >
+                                    Ver Planes y Precios
+                                    <Crown className="w-4 h-4" />
+                                </Link>
+                                <button
+                                    onClick={() => setShowLimitModal(false)}
+                                    className="w-full py-3 text-white/40 hover:text-white transition-colors text-sm"
+                                >
+                                    Quizás más tarde
+                                </button>
+                            </div>
+
+                            <button
+                                onClick={() => setShowLimitModal(false)}
+                                className="absolute top-4 right-4 p-2 text-white/20 hover:text-white transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

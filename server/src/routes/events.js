@@ -47,15 +47,22 @@ router.post('/', authMiddleware, async (req, res) => {
             .eq('id', req.user.id)
             .single();
         
+        console.log('--- DBG: Create Event ---');
+        console.log('User:', req.user.id, 'Plan:', profile?.subscription_plan);
+
         if (profile?.subscription_plan === 'free' || !profile) {
             const { count: eventCount } = await supabase
                 .from('events')
                 .select('*', { count: 'exact', head: true })
                 .eq('user_id', req.user.id);
             
-            if (eventCount >= 1) {
+            const trialLimit = parseInt(process.env.FREE_TRIAL_LIMIT || '1');
+            console.log('Events:', eventCount, 'Limit:', trialLimit);
+
+            if (eventCount >= trialLimit) {
+                console.log('Blocking: Limit Reached');
                 return res.status(403).json({
-                    message: 'El plan gratuito está limitado a 1 evento. Mejorá tu plan para crear eventos ilimitados.',
+                    message: `Has alcanzado el límite de ${trialLimit} eventos gratuitos. Mejorá tu plan para crear eventos ilimitados.`,
                     limit_reached: true
                 });
             }

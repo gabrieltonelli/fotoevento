@@ -1,8 +1,4 @@
-import dotenv from 'dotenv';
-// Only load dotenv in non-production environments
-if (process.env.NODE_ENV !== 'production') {
-    dotenv.config();
-}
+import './loadEnv.js';
 import express from 'express';
 import cors from 'cors';
 import eventRoutes from './routes/events.js';

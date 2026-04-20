@@ -1,10 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
-import path from 'path';
-// Only load dotenv in non-production environments where the .env file might exist locally
-if (process.env.NODE_ENV !== 'production') {
-    dotenv.config();
-}
+import './../loadEnv.js';
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

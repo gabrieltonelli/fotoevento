@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import { motion } from 'framer-motion';
 import { CreditCard, Download, ExternalLink, Calendar, CheckCircle, Clock } from 'lucide-react';
@@ -120,10 +121,10 @@ export default function Billing() {
                                 )}
                             </div>
                         </div>
-                        <button className="btn-primary flex items-center gap-2">
+                        <Link to="/pricing" className="btn-primary flex items-center gap-2">
                             Cambiar Plan
                             <ExternalLink className="w-4 h-4" />
-                        </button>
+                        </Link>
                     </div>
                 </motion.div>
 

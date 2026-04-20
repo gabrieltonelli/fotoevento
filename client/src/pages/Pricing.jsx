@@ -45,36 +45,36 @@ export default function Pricing() {
     const [freeTrialLimit, setFreeTrialLimit] = useState(1);
     const [showTrialLimitModal, setShowTrialLimitModal] = useState(false);
 
-    // Cargar procesadores habilitados
+    const [eventsCount, setEventsCount] = useState(0);
+
+    // Cargar procesadores y conteo de eventos
     useEffect(() => {
         const envProcessors = (import.meta.env.VITE_PAYMENT_PROCESSORS || 'stripe').split(',').map(p => p.trim());
         setProcessors(envProcessors);
         setSelectedProcessor(envProcessors[0] || 'stripe');
 
-        // Si hay API, cargar desde el backend
+        // Cargar procesadores
         api.getProcessors()
             .then(data => {
                 setProcessors(data.processors || envProcessors);
                 setDefaultProcessor(data.default || envProcessors[0]);
                 setSelectedProcessor(data.default || envProcessors[0]);
                 setFreeTrialLimit(data.free_trial_limit || 1);
-            })
-            .catch(() => {
-                // Fallback a env vars
             });
-    }, []);
 
-    // Mostrar mensaje si viene de un pago cancelado
-    useEffect(() => {
-        if (searchParams.get('payment') === 'cancelled') {
-            toast.error('Pago cancelado. Podés intentar de nuevo cuando quieras.');
+        // Cargar conteo de eventos si el usuario está logueado
+        if (user) {
+            const token = getToken();
+            api.getEvents(token)
+                .then(data => {
+                    setEventsCount(data.events?.length || 0);
+                })
+                .catch(err => console.error('Error fetching events for pricing:', err));
         }
-    }, [searchParams]);
+    }, [user, getToken]);
 
-
-    const trialsUsed = profile?.trials_used_count || (profile?.trial_used ? 1 : 0);
-    const trialsRemaining = Math.max(0, freeTrialLimit - trialsUsed);
-    const hasTrialsLeft = trialsRemaining > 0;
+    const trialsRemaining = Math.max(0, freeTrialLimit - eventsCount);
+    const hasTrialsLeft = trialsRemaining > 0 || profile?.subscription_plan !== 'free';
 
     const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'annual'
 
@@ -140,9 +140,11 @@ export default function Pricing() {
             name: 'Gratuito',
             price: { monthly: 0, annual: 0 },
             period: 'una vez',
-            description: hasTrialsLeft 
-                ? `Te quedan ${trialsRemaining} prubas de 1 evento.`
-                : 'Ya usaste tus pruebas gratuitas.',
+            description: hasTrialsLeft && profile?.subscription_plan === 'free'
+                ? `Te quedan ${trialsRemaining} eventos de ${freeTrialLimit} disponibles.`
+                : profile?.subscription_plan !== 'free'
+                    ? 'Ya tenés un plan superior activo.'
+                    : 'Ya usaste tus pruebas gratuitas.',
             icon: Star,
             gradient: 'from-gray-500 to-gray-600',
             features: [

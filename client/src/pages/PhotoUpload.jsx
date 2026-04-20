@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Upload, X, Check, AlertTriangle, User, Image as ImageIcon } from 'lucide-react';
+import { Camera, Upload, X, Check, AlertTriangle, User, Clock, Image as ImageIcon } from 'lucide-react';
 import { resizeImage } from '../utils/imageUtils';
 import { hashFile } from '../utils/hashUtils';
 import toast from 'react-hot-toast';
@@ -19,6 +19,7 @@ export default function PhotoUpload() {
     const [dragOver, setDragOver] = useState(false);
     const [uploadedCount, setUploadedCount] = useState(0);
     const photoIdCounter = useRef(0);
+    const [showTrialModal, setShowTrialModal] = useState(false);
     const uploadedHashes = useRef(new Set()); // Track hashes of already uploaded photos
 
     useEffect(() => {
@@ -150,7 +151,12 @@ export default function PhotoUpload() {
                 }, 1500);
             } catch (err) {
                 failCount++;
+                if (err.trial_expired) {
+                    setShowTrialModal(true);
+                }
                 setPhotos(prev => prev.map(p => p.id === photo.id ? { ...p, status: 'error', message: err.message } : p));
+                // If it's trial expired, stop trying others
+                if (err.trial_expired) break;
             }
         }
 
@@ -356,6 +362,45 @@ export default function PhotoUpload() {
                     </p>
                 </div>
             </main>
+
+            {/* Trial Expired Modal */}
+            <AnimatePresence>
+                {showTrialModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowTrialModal(false)}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative w-full max-w-sm glass rounded-3xl p-8 text-center border border-white/10"
+                        >
+                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400/20 to-orange-500/20 flex items-center justify-center mx-auto mb-6">
+                                <Clock className="w-10 h-10 text-amber-400" />
+                            </div>
+                            
+                            <h2 className="font-display text-2xl font-bold text-white mb-3">Periodo de prueba finalizado</h2>
+                            <p className="text-white/60 text-sm mb-8 leading-relaxed">
+                                Este evento ha completado su tiempo de prueba gratuito de {import.meta.env.VITE_FREE_TRIAL_MINUTES || '30'} minutos. 
+                                <br /><br />
+                                Avisale al organizador para que mejore su plan y así poder compartir tus mejores momentos.
+                            </p>
+
+                            <button
+                                onClick={() => setShowTrialModal(false)}
+                                className="w-full btn-primary !bg-gradient-to-r !from-amber-400 !to-orange-500 !border-none text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/20"
+                            >
+                                Entendido
+                            </button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

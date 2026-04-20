@@ -42,7 +42,7 @@ router.get('/processors', (req, res) => {
  */
 router.post('/checkout', authMiddleware, async (req, res) => {
     try {
-        const { plan, eventId, processor } = req.body;
+        const { plan, eventId, processor, cycle } = req.body;
 
         if (!plan || !PLANS[plan] || plan === 'free') {
             return res.status(400).json({ message: 'Seleccioná un plan de pago válido (pro o premium)' });
@@ -54,6 +54,7 @@ router.post('/checkout', authMiddleware, async (req, res) => {
             userId: req.user.id,
             userEmail: req.user.email,
             processor,
+            cycle: cycle || 'monthly'
         });
 
         res.json(result);

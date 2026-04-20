@@ -10,6 +10,7 @@
 
 import Stripe from 'stripe';
 import { MercadoPagoConfig, Preference, Payment as MPPayment, PreApproval } from 'mercadopago';
+import './../loadEnv.js';
 import { supabase } from './supabase.js';
 
 // ─── Planes ───
@@ -287,65 +288,59 @@ export async function handleStripeWebhook(rawBody, signature) {
 // ═══════════════════════════════════════
 // MERCADO PAGO (Subscriptions / PreApproval)
 // ═══════════════════════════════════════
-export async function createMPSubscription({ plan, eventId, userId, userEmail, cycle }) {
-    if (!mpClient) throw new Error('MercadoPago no está configurado');
-    
-    const preApproval = new PreApproval(mpClient);
+export async function createMPPreference({ plan, eventId, userId, userEmail }) {
+    if (!mpPreference) throw new Error('MercadoPago no está configurado');
+
     const selectedPlan = PLANS[plan];
-    
     const appUrl = process.env.VITE_APP_URL || 'http://localhost:5173';
-    
-    // Obtener el ciclo y el ID correspondiente
-    const currentCycle = cycle || 'monthly';
-    let mpPlanId = null;
-
-    if (plan === 'pro') {
-        mpPlanId = currentCycle === 'annual' 
-            ? process.env.VITE_MP_PLAN_PRO_ANNUAL_ID 
-            : process.env.VITE_MP_PLAN_PRO_ID;
-    } else if (plan === 'premium') {
-        mpPlanId = currentCycle === 'annual' 
-            ? process.env.VITE_MP_PLAN_PREMIUM_ANNUAL_ID 
-            : process.env.VITE_MP_PLAN_PREMIUM_ID;
-    }
-
-    if (!mpPlanId) {
-        throw new Error(`ID de plan de Mercado Pago no configurado para el plan "${plan}" (${currentCycle})`);
-    }
 
     try {
-        const result = await preApproval.create({
+        const result = await mpPreference.create({
             body: {
-                preapproval_plan_id: mpPlanId,
-                reason: `Foto Eventos - Plan ${selectedPlan.name}`,
+                items: [
+                    {
+                        id: plan,
+                        title: `Foto Eventos - Plan ${selectedPlan.name}`,
+                        quantity: 1,
+                        unit_price: selectedPlan.price,
+                        currency_id: selectedPlan.currency, // 'ARS'
+                        description: selectedPlan.features,
+                    }
+                ],
                 external_reference: JSON.stringify({
                     plan,
                     event_id: eventId || '',
                     user_id: userId,
                 }),
-                payer_email: userEmail,
-                back_url: `${appUrl}/dashboard?payment=success&plan=${plan}&event=${eventId || ''}&processor=mercadopago`,
-                status: "pending"
+                payer: {
+                    email: userEmail,
+                },
+                back_urls: {
+                    success: `${appUrl}/dashboard?payment=success&plan=${plan}&event=${eventId || ''}&processor=mercadopago`,
+                    failure: `${appUrl}/pricing?payment=failed`,
+                    pending: `${appUrl}/pricing?payment=pending`,
+                },
+                notification_url: process.env.VITE_APP_URL?.includes('localhost') 
+                    ? undefined 
+                    : `${process.env.VITE_APP_URL}/api/payments/webhook/mercadopago`,
             }
         });
 
         return {
             url: result.init_point,
             sandboxUrl: result.sandbox_init_point || result.init_point,
-            preapprovalId: result.id,
+            preferenceId: result.id,
             processor: 'mercadopago',
         };
     } catch (error) {
-        console.error("Error creando suscripción en MP:", error);
-        // Bubble up the specific MP error message if available
-        const mpErrorMsg = error.message || (error.response?.data?.message) || "No se pudo iniciar el proceso de suscripción";
-        throw new Error(mpErrorMsg);
+        console.error("❌ Error MercadoPago Details:", error.response?.data || error.message);
+        throw new Error("MercadoPago: " + (error.response?.data?.message || error.message));
     }
 }
 
 export async function createMPCheckout({ plan, eventId, userId, userEmail, cycle }) {
-    // Si queremos que TODO en MP sea suscripción, redirigimos a createMPSubscription
-    return createMPSubscription({ plan, eventId, userId, userEmail, cycle });
+    // Usamos Preference (Checkout Pro) para mayor compatibilidad
+    return createMPPreference({ plan, eventId, userId, userEmail });
 }
 
 export async function handleMPWebhook(query, body) {
@@ -393,7 +388,7 @@ export async function handleMPWebhook(query, body) {
 // ═══════════════════════════════════════
 // Unified checkout (elige procesador)
 // ═══════════════════════════════════════
-export async function createCheckout({ plan, eventId, userId, userEmail, processor }) {
+export async function createCheckout({ plan, eventId, userId, userEmail, processor, cycle }) {
     const chosenProcessor = processor || defaultProcessor;
 
     if (!isProcessorEnabled(chosenProcessor)) {

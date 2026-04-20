@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     ArrowLeft, Calendar, Type, MapPin, Palette, Settings,
-    Eye, EyeOff, QrCode, Lock, Users, Save, Crown
+    Eye, EyeOff, QrCode, Lock, Users, Save, Crown, Clock, X
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import toast from 'react-hot-toast';
@@ -13,7 +13,9 @@ import toast from 'react-hot-toast';
 export default function CreateEvent() {
     const { getToken } = useAuth();
     const navigate = useNavigate();
+    console.log('--- DBG: Render CreateEvent ---');
     const [loading, setLoading] = useState(false);
+    const [showLimitModal, setShowLimitModal] = useState(false);
     const [form, setForm] = useState({
         name: '',
         type: 'wedding',
@@ -46,7 +48,7 @@ export default function CreateEvent() {
     ];
 
     const plans = [
-        { id: 'free', name: 'Gratuito', price: 0, photos: import.meta.env.VITE_PLAN_FREE_MAX_PHOTOS || '50', desc: `Prueba de ${import.meta.env.FREE_TRIAL_MINUTES || '30'} mins` },
+        { id: 'free', name: 'Gratuito', price: 0, photos: import.meta.env.VITE_PLAN_FREE_MAX_PHOTOS || '50', desc: `Prueba de ${import.meta.env.VITE_FREE_TRIAL_MINUTES || '30'} mins` },
         { id: 'pro', name: 'Pro', price: parseInt(import.meta.env.VITE_PLAN_PRO_PRICE || '4990'), photos: import.meta.env.VITE_PLAN_PRO_MAX_PHOTOS || '500', desc: 'Para fiestas grandes' },
         { id: 'premium', name: 'Premium', price: parseInt(import.meta.env.VITE_PLAN_PREMIUM_PRICE || '9990'), photos: '∞', desc: 'Sin límites' },
     ];
@@ -68,6 +70,9 @@ export default function CreateEvent() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        console.log('--- DBG: Click en Crear Evento ---');
+        console.log('Form State:', form);
+
         if (!form.name || !form.date) {
             toast.error('Completá nombre y fecha del evento');
             return;
@@ -78,9 +83,21 @@ export default function CreateEvent() {
             const data = await api.createEvent(form, token);
             toast.success('¡Evento creado!');
             navigate(`/events/${data.event?.id || 'demo-1'}`);
-        } catch {
-            toast.success('Evento creado (modo demo)');
-            navigate('/dashboard');
+        } catch (err) {
+            console.log('--- DBG: Create Event Error ---');
+            console.log('Error Object:', err);
+            console.log('Limit Reached Flag:', err.limit_reached);
+            
+            if (err.limit_reached) {
+                setShowLimitModal(true);
+            } else {
+                toast.error(err.message || 'Error al crear el evento');
+                // Solo modo demo si no hay token o es un error de red
+                if (!getToken()) {
+                    toast.success('Simulando creación (modo demo)');
+                    navigate('/dashboard');
+                }
+            }
         } finally {
             setLoading(false);
         }
@@ -285,6 +302,61 @@ export default function CreateEvent() {
                     </form>
                 </motion.div>
             </main>
+
+            {/* Limit Reached Modal */}
+            <AnimatePresence>
+                {showLimitModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowLimitModal(false)}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative w-full max-w-md glass rounded-3xl p-8 text-center border border-white/10"
+                        >
+                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400/20 to-orange-500/20 flex items-center justify-center mx-auto mb-6">
+                                <Crown className="w-10 h-10 text-amber-400" />
+                            </div>
+                            
+                            <h2 className="font-display text-2xl font-bold text-white mb-3">¡Límite de eventos alcanzado!</h2>
+                            <p className="text-white/60 text-sm mb-8 leading-relaxed">
+                                Has completado tus {import.meta.env.VITE_FREE_TRIAL_LIMIT || '5'} eventos gratuitos. 
+                                <br /><br />
+                                Mejorando a un plan **Pro** o **Premium** podrás crear eventos ilimitados, subir más fotos y personalizar la experiencia al máximo.
+                            </p>
+
+                            <div className="flex flex-col gap-3">
+                                <Link
+                                    to="/pricing"
+                                    className="w-full btn-primary !bg-gradient-to-r !from-amber-400 !to-orange-500 !border-none text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2"
+                                >
+                                    Ver Planes y Precios
+                                    <Crown className="w-4 h-4" />
+                                </Link>
+                                <button
+                                    onClick={() => setShowLimitModal(false)}
+                                    className="w-full py-3 text-white/40 hover:text-white transition-colors text-sm"
+                                >
+                                    Quizás más tarde
+                                </button>
+                            </div>
+
+                            <button
+                                onClick={() => setShowLimitModal(false)}
+                                className="absolute top-4 right-4 p-2 text-white/20 hover:text-white transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

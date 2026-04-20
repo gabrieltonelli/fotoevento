@@ -24,8 +24,9 @@ function ProtectedRoute({ children }) {
 
     if (!user) return <Navigate to="/login" />;
 
-    // Si no tiene plan y no estamos en dev mode, obligar a elegir uno
-    if (!isDevMode && (!profile || profile.subscription_plan === 'none' || profile.subscription_status === 'inactive')) {
+    // Solo redirigir si el perfil terminó de cargar y explícitamente no tiene plan
+    // Si el perfil es null pero no estamos cargando auth, esperamos un poco
+    if (!isDevMode && profile && (profile.subscription_plan === 'none' || profile.subscription_status === 'inactive')) {
         return <Navigate to="/pricing?from=guard" />;
     }
 

@@ -1,5 +1,7 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import toast from 'react-hot-toast';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -32,6 +34,27 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
+    const location = useLocation();
+
+    useEffect(() => {
+        // Manejar errores de autenticación que vienen en el hash (ej. links expirados)
+        const hash = window.location.hash;
+        if (hash.includes('error=')) {
+            const params = new URLSearchParams(hash.substring(1));
+            const errorCode = params.get('error_code');
+            const errorDesc = params.get('error_description');
+
+            if (errorCode === 'otp_expired' || errorDesc?.includes('expired')) {
+                toast.error('El enlace de confirmación ha expirado. Por favor, registrate de nuevo o solicitá un nuevo enlace.', { duration: 6000 });
+            } else {
+                toast.error(errorDesc || 'Error de autenticación');
+            }
+            
+            // Limpiar el hash de la URL sin recargar
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    }, [location]);
+
     return (
         <Routes>
             <Route path="/" element={<Landing />} />

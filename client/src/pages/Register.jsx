@@ -6,7 +6,7 @@ import { Camera, Mail, Lock, User, Eye, EyeOff, UserPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Register() {
-    const { signUp, signInWithGoogle } = useAuth();
+    const { signUp, signInWithGoogle, resendVerification } = useAuth();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const returnTo = searchParams.get('returnTo') || '/dashboard';
@@ -37,11 +37,24 @@ export default function Register() {
         }
 
         setLoading(true);
-        const { error } = await signUp(email, password, fullName);
-        setLoading(false);
+        const { error, data } = await signUp(email, password, fullName);
+        
         if (error) {
-            toast.error(error.message);
+            setLoading(false);
+            if (error.message?.includes('already registered')) {
+                // El usuario ya existe. Si no está confirmado, intentamos reenviar email.
+                toast('Ya registraste esta cuenta. Re-enviando email de confirmación...', { icon: '📧' });
+                const { error: resendError } = await resendVerification(email);
+                if (resendError) {
+                    toast.error('Error al reenviar email: ' + resendError.message);
+                } else {
+                    navigate(`/verify-email?email=${encodeURIComponent(email)}&returnTo=${encodeURIComponent(returnTo)}`);
+                }
+            } else {
+                toast.error(error.message);
+            }
         } else {
+            setLoading(false);
             toast.success('¡Registro exitoso! Por favor, verifica tu email.');
             navigate(`/verify-email?email=${encodeURIComponent(email)}&returnTo=${encodeURIComponent(returnTo)}`);
         }

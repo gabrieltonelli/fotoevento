@@ -8,31 +8,27 @@ export const useAuth = () => useContext(AuthContext);
 // ─── Modo Desarrollo ───
 const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true';
 
-const DEV_USER = DEV_MODE ? {
+const getDevUser = (email, fullName) => ({
     id: import.meta.env.VITE_DEV_USER_ID || 'dev-user-00000-00000-00000',
-    email: import.meta.env.VITE_DEV_USER_EMAIL || 'dev@fotoevento.dev',
+    email: email || import.meta.env.VITE_DEV_USER_EMAIL || 'dev@fotoevento.dev',
     user_metadata: {
-        full_name: import.meta.env.VITE_DEV_USER_NAME || 'Dev User',
+        full_name: fullName || import.meta.env.VITE_DEV_USER_NAME || 'Dev User',
     },
     app_metadata: {},
     aud: 'authenticated',
     role: 'authenticated',
     created_at: new Date().toISOString(),
-} : null;
+});
 
-const DEV_SESSION = DEV_MODE ? {
+const getDevSession = (user) => ({
     access_token: 'dev-token-fotoevento',
     refresh_token: 'dev-refresh-token',
-    user: DEV_USER,
-} : null;
-
-if (DEV_MODE) {
-    console.log('🛠️ Modo Desarrollo activo — usuario mock:', DEV_USER.email);
-}
+    user: user,
+});
 
 export function AuthProvider({ children }) {
-    const [user, setUser] = useState(DEV_MODE ? DEV_USER : null);
-    const [session, setSession] = useState(DEV_MODE ? DEV_SESSION : null);
+    const [user, setUser] = useState(null);
+    const [session, setSession] = useState(null);
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -51,7 +47,14 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         if (DEV_MODE) {
-            refreshProfile();
+            const savedUser = localStorage.getItem('fotoevento-dev-user');
+            if (savedUser) {
+                const u = JSON.parse(savedUser);
+                const s = getDevSession(u);
+                setUser(u);
+                setSession(s);
+                refreshProfile(s);
+            }
             setLoading(false);
             return;
         }
@@ -76,26 +79,47 @@ export function AuthProvider({ children }) {
     const signUp = async (email, password, fullName) => {
         if (DEV_MODE) {
             console.log('🛠️ [DevMode] signUp simulado:', email);
-            setSession(DEV_SESSION);
-            setUser(DEV_USER);
-            return { data: { user: DEV_USER, session: DEV_SESSION }, error: null };
+            const mockUser = getDevUser(email, fullName);
+            const mockSession = getDevSession(mockUser);
+            // No auto-logeamos en el signup si queremos ver la pantalla de verificación
+            // Pero el usuario ya existe en nuestro "mock"
+            return { data: { user: mockUser, session: null }, error: null };
         }
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
                 data: { full_name: fullName },
+                emailRedirectTo: `${window.location.origin}/dashboard`
             },
         });
         return { data, error };
     };
 
+    const resendVerification = async (email) => {
+        if (DEV_MODE) {
+            console.log('🛠️ [DevMode] re-enviando email mock a:', email);
+            return { error: null };
+        }
+        const { error } = await supabase.auth.resend({
+            type: 'signup',
+            email,
+            options: {
+                emailRedirectTo: `${window.location.origin}/dashboard`
+            }
+        });
+        return { error };
+    };
+
     const signIn = async (email, password) => {
         if (DEV_MODE) {
             console.log('🛠️ [DevMode] signIn simulado:', email);
-            setSession(DEV_SESSION);
-            setUser(DEV_USER);
-            return { data: { user: DEV_USER, session: DEV_SESSION }, error: null };
+            const mockUser = getDevUser(email);
+            const mockSession = getDevSession(mockUser);
+            setSession(mockSession);
+            setUser(mockUser);
+            localStorage.setItem('fotoevento-dev-user', JSON.stringify(mockUser));
+            return { data: { user: mockUser, session: mockSession }, error: null };
         }
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         return { data, error };
@@ -104,9 +128,12 @@ export function AuthProvider({ children }) {
     const signInWithGoogle = async () => {
         if (DEV_MODE) {
             console.log('🛠️ [DevMode] Google login simulado');
-            setSession(DEV_SESSION);
-            setUser(DEV_USER);
-            return { data: { user: DEV_USER, session: DEV_SESSION }, error: null };
+            const mockUser = getDevUser('google@example.com', 'Google User');
+            const mockSession = getDevSession(mockUser);
+            setSession(mockSession);
+            setUser(mockUser);
+            localStorage.setItem('fotoevento-dev-user', JSON.stringify(mockUser));
+            return { data: { user: mockUser, session: mockSession }, error: null };
         }
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
@@ -121,6 +148,7 @@ export function AuthProvider({ children }) {
             setSession(null);
             setUser(null);
             setProfile(null);
+            localStorage.removeItem('fotoevento-dev-user');
             return { error: null };
         }
         const { error } = await supabase.auth.signOut();
@@ -151,6 +179,7 @@ export function AuthProvider({ children }) {
         loading,
         signUp,
         signIn,
+        resendVerification,
         signInWithGoogle,
         signOut,
         getToken,

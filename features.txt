@@ -33,3 +33,5 @@ agregar politicas de privacidad y terminos y condiciones que el usuario debe ace
 ----------Dudas:
 
 que pasa al activar un plan de forma anual? se deberia cobrar por adelantado el año y la suscripcion deberia pasar de periodicedad mensual a anual
+
+testear validacion por ia

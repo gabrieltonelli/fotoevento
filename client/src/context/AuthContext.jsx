@@ -31,17 +31,21 @@ export function AuthProvider({ children }) {
     const [session, setSession] = useState(null);
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [profileLoading, setProfileLoading] = useState(false);
 
     const refreshProfile = useCallback(async (currentSession) => {
         const sess = currentSession || session;
         if (!sess?.access_token && !DEV_MODE) return;
 
+        setProfileLoading(true);
         try {
             const { api } = await import('../services/api');
             const data = await api.getProfile(DEV_MODE ? 'dev-token-fotoevento' : sess.access_token);
             setProfile(data);
         } catch (err) {
             console.error('Error loading profile:', err);
+        } finally {
+            setProfileLoading(false);
         }
     }, [session]);
 
@@ -177,6 +181,7 @@ export function AuthProvider({ children }) {
         session,
         profile,
         loading,
+        profileLoading,
         signUp,
         signIn,
         resendVerification,

@@ -17,9 +17,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, ArrowRight } from 'lucide-react';
 
 function ProtectedRoute({ children }) {
-    const { user, profile, loading, isDevMode } = useAuth();
+    const { user, profile, loading, profileLoading } = useAuth();
     
-    if (loading) {
+    if (loading || (user && profileLoading)) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-dark-950">
                 <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
@@ -29,8 +29,10 @@ function ProtectedRoute({ children }) {
 
     if (!user) return <Navigate to="/login" />;
 
-    // Eliminamos la redirección automática a pricing para evitar bloqueos.
-    // El Dashboard y las otras páginas ya manejan sus propios avisos de suscripción.
+    // Si el usuario está logueado pero no tiene un plan seleccionado, lo mandamos a pricing
+    if (profile && profile.subscription_plan === 'none') {
+        return <Navigate to="/pricing" />;
+    }
 
     return children;
 }

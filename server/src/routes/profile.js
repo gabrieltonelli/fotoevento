@@ -32,6 +32,27 @@ router.get('/', authMiddleware, async (req, res) => {
             return res.json(newProfile);
         }
 
+        // --- LÓGICA DE EXPIRACIÓN ---
+        if (profile && profile.subscription_plan !== 'free' && profile.subscription_plan !== 'none') {
+            const expiry = new Date(profile.subscription_expiry);
+            if (expiry < new Date()) {
+                console.log(`🕒 Suscripción expirada para ${req.user.id}. Aplicando downgrade...`);
+                const { data: updatedProfile } = await supabase
+                    .from('profiles')
+                    .update({
+                        subscription_plan: 'free',
+                        subscription_status: 'inactive',
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', req.user.id)
+                    .select()
+                    .single();
+                
+                return res.json(updatedProfile || profile);
+            }
+        }
+        // -----------------------------
+
         res.json(profile);
     } catch (err) {
         console.error('Error fetching profile:', err);

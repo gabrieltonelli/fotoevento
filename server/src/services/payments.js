@@ -224,7 +224,7 @@ export async function activatePlan({ plan, userId, eventId, paymentId, processor
 // ═══════════════════════════════════════
 // STRIPE
 // ═══════════════════════════════════════
-export async function createStripeCheckout({ plan, eventId, userId }) {
+export async function createStripeCheckout({ plan, eventId, userId, cycle }) {
     if (!stripe) throw new Error('Stripe no está configurado');
 
     const selectedPlan = PLANS[plan];
@@ -244,9 +244,11 @@ export async function createStripeCheckout({ plan, eventId, userId }) {
                         name: `Plan ${selectedPlan.name} - Foto Eventos`,
                         description: selectedPlan.features,
                     },
-                    unit_amount: selectedPlan.price * 100,
+                    unit_amount: cycle === 'annual' 
+                        ? Math.round(selectedPlan.price * 0.8) * 100 
+                        : selectedPlan.price * 100,
                     recurring: {
-                        interval: 'month',
+                        interval: cycle === 'annual' ? 'year' : 'month',
                     },
                 },
                 quantity: 1,
@@ -371,9 +373,11 @@ export async function createMPSubscription({ plan, eventId, userId, userEmail, c
                 external_reference: JSON.stringify({ plan, event_id: eventId || '', user_id: userId }),
                 payer_email: userEmail,
                 auto_recurring: {
-                    frequency: 1,
-                    frequency_type: cycle === 'annual' ? 'months' : 'months', // Anual se maneja con 12 meses? MP preapproval es un poco limitado
-                    transaction_amount: selectedPlan.price,
+                    frequency: cycle === 'annual' ? 12 : 1,
+                    frequency_type: 'months',
+                    transaction_amount: cycle === 'annual' 
+                        ? Math.round(selectedPlan.price * 0.8) 
+                        : selectedPlan.price,
                     currency_id: 'ARS',
                 },
                 back_url: `${appUrl}/dashboard?payment=success&plan=${plan}&event=${eventId || ''}&processor=mercadopago`,
@@ -394,7 +398,7 @@ export async function createMPSubscription({ plan, eventId, userId, userEmail, c
 }
 
 export async function createMPCheckout({ plan, eventId, userId, userEmail, cycle }) {
-    // Si es MP y queremos suscripción recurrente real
+    // Volvemos a usar PreApproval para soportar suscripciones recurrentes reales gestionadas por MP
     return createMPSubscription({ plan, eventId, userId, userEmail, cycle });
 }
 
@@ -439,15 +443,17 @@ export async function cancelSubscription(userId) {
         }
     }
 
-    // 2. Actualizar perfil a FREE (opcional: esperar a que termine el periodo, 
-    // pero para seguridad de 'Stop Debit' el usuario suele querer feedback inmediato)
+    // 2. Marcar como cancelada pero NO revertir el plan inmediatamente.
+    // El usuario seguirá teniendo acceso hasta 'subscription_expiry'.
     await supabase.from('profiles').update({
-        subscription_plan: 'free',
-        subscription_status: 'cancelled',
+        subscription_status: 'cancelling',
         updated_at: new Date().toISOString()
     }).eq('id', userId);
 
-    return { success: true, message: 'Suscripción cancelada correctamente' };
+    return { 
+        success: true, 
+        message: 'Suscripción cancelada. Podrás seguir usando el servicio hasta el final de tu periodo contratado.' 
+    };
 }
 
 export async function handleMPWebhook(query, body) {
@@ -504,7 +510,7 @@ export async function createCheckout({ plan, eventId, userId, userEmail, process
 
     switch (chosenProcessor) {
         case 'stripe':
-            return createStripeCheckout({ plan, eventId, userId });
+            return createStripeCheckout({ plan, eventId, userId, cycle });
         case 'mercadopago':
             return createMPCheckout({ plan, eventId, userId, userEmail, cycle });
         default:

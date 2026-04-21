@@ -132,12 +132,16 @@ export default function Billing() {
                             <div className="flex items-center gap-4 mt-2">
                                 <span className="flex items-center gap-1.5 text-sm text-white/60">
                                     <Clock className="w-4 h-4 text-amber-500" />
-                                    {profile?.subscription_status === 'active' ? 'Suscripción Activa' : 'Suscripción Inactiva'}
+                                    {profile?.subscription_status === 'active' 
+                                        ? 'Suscripción Activa' 
+                                        : profile?.subscription_status === 'cancelling'
+                                            ? 'Suscripción por finalizar'
+                                            : 'Suscripción Inactiva'}
                                 </span>
                                 {profile?.subscription_expiry && (
                                     <span className="flex items-center gap-1.5 text-sm text-white/60">
                                         <Calendar className="w-4 h-4 text-amber-500" />
-                                        Vence el: {new Date(profile.subscription_expiry).toLocaleDateString()}
+                                        {profile?.subscription_status === 'cancelling' ? 'Acceso hasta el:' : 'Vence el:'} {new Date(profile.subscription_expiry).toLocaleDateString()}
                                     </span>
                                 )}
                             </div>
@@ -148,7 +152,8 @@ export default function Billing() {
                                 <ExternalLink className="w-4 h-4" />
                             </Link>
                         )}
-                        {(profile?.subscription_plan === 'pro' || profile?.subscription_plan === 'premium') && (
+                        {(profile?.subscription_plan === 'pro' || profile?.subscription_plan === 'premium') && 
+                          profile?.subscription_status !== 'cancelling' && (
                             <button 
                                 onClick={() => setShowCancelModal(true)}
                                 className="px-4 py-2 rounded-xl border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-all text-sm font-semibold"
@@ -244,10 +249,10 @@ export default function Billing() {
                             <h3 className="text-2xl font-display font-bold text-white mb-4">
                                 ¿Estás seguro de cancelar?
                             </h3>
-                            <p className="text-white/60 mb-8 text-sm leading-relaxed">
+                             <p className="text-white/60 mb-8 text-sm leading-relaxed">
                                 Al cancelar tu suscripción, **se detendrán los cobros automáticos** en tu procesador de pago. 
                                 <br /><br />
-                                <span className="text-red-400/80">Importante:</span> Perderás el acceso a tus beneficios premium (fotos ilimitadas, skins exclusivos y descarga de álbumes) de forma inmediata.
+                                Podrás seguir disfrutando de tus beneficios (fotos ilimitadas, skins exclusivos y descarga de álbumes) hasta que finalice tu tiempo contratado el día **{new Date(profile?.subscription_expiry).toLocaleDateString()}**.
                             </p>
 
                             <div className="flex flex-col gap-3">

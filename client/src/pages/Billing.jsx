@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { CreditCard, Download, ExternalLink, Calendar, CheckCircle, Clock, Crown } from 'lucide-react';
 import toast from 'react-hot-toast';
 

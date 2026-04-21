@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import { Camera, Mail, Lock, User, Eye, EyeOff, UserPlus } from 'lucide-react';
@@ -7,7 +7,9 @@ import toast from 'react-hot-toast';
 
 export default function Register() {
     const { signUp, signInWithGoogle } = useAuth();
+    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+    const returnTo = searchParams.get('returnTo') || '/dashboard';
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -40,8 +42,8 @@ export default function Register() {
         if (error) {
             toast.error(error.message);
         } else {
-            toast.success('¡Iniciando tu experiencia! Seleccioná un plan para continuar.');
-            navigate('/pricing?from=register');
+            toast.success('¡Registro exitoso! Por favor, verifica tu email.');
+            navigate(`/verify-email?email=${encodeURIComponent(email)}&returnTo=${encodeURIComponent(returnTo)}`);
         }
     };
 

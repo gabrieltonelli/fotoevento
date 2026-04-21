@@ -24,4 +24,38 @@ router.get('/event/:shortCode', async (req, res) => {
     }
 });
 
+/**
+ * GET /api/public/check-verification?email=xxx
+ * Checks if a user is confirmed in Supabase.
+ */
+router.get('/check-verification', async (req, res) => {
+    const { email } = req.query;
+
+    if (!email) {
+        return res.status(400).json({ message: 'Email es requerido' });
+    }
+
+    try {
+        // Obtenemos el usuario usando la API de admin (necesita service_role key)
+        const { data, error } = await supabase.auth.admin.listUsers();
+        
+        if (error) throw error;
+
+        const user = data.users.find(u => u.email === email);
+
+        if (!user) {
+            return res.json({ confirmed: false, exists: false });
+        }
+
+        // email_confirmed_at existe si el usuario ya validó su cuenta
+        res.json({ 
+            confirmed: !!user.email_confirmed_at, 
+            exists: true 
+        });
+    } catch (err) {
+        console.error('Error checking verification:', err);
+        res.status(500).json({ message: 'Error checking verification' });
+    }
+});
+
 export default router;

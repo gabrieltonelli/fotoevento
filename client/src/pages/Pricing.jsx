@@ -81,7 +81,7 @@ export default function Pricing() {
     const handleCheckout = async (planId) => {
         if (!user) {
             toast('Necesitás iniciar sesión para comprar un plan', { icon: '🔐' });
-            navigate('/register');
+            navigate('/register?returnTo=/pricing');
             return;
         }
 

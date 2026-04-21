@@ -123,7 +123,10 @@ export const api = {
             headers: { Authorization: `Bearer ${token}` },
         }),
 
-    // Public event info
+    // Public info & Auth helpers
     getPublicEvent: (shortCode) =>
         fetchAPI(`/api/public/event/${shortCode}`),
+    
+    checkVerification: (email) =>
+        fetchAPI(`/api/public/check-verification?email=${encodeURIComponent(email)}`),
 };

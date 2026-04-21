@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import { Camera, Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
@@ -8,21 +8,30 @@ import toast from 'react-hot-toast';
 export default function Login() {
     const { signIn, signInWithGoogle } = useAuth();
     const navigate = useNavigate();
-    const [email, setEmail] = useState('');
+    const [searchParams] = useSearchParams();
+    const [email, setEmail] = useState(searchParams.get('email') || '');
     const [password, setPassword] = useState('');
     const [showPw, setShowPw] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (searchParams.get('verified') === 'true') {
+            toast.success('Email verificado correctamente. Ya podés iniciar sesión.', { id: 'verified-success' });
+        }
+    }, [searchParams]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         const { error } = await signIn(email, password);
-        setLoading(false);
+        setLoading(true); // Mantener loading mientras redirige
         if (error) {
+            setLoading(false);
             toast.error(error.message);
         } else {
             toast.success('¡Bienvenido!');
-            navigate('/dashboard');
+            const returnTo = searchParams.get('returnTo') || '/dashboard';
+            navigate(returnTo);
         }
     };
 

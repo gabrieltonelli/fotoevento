@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../services/supabase';
 
 const AuthContext = createContext({});
@@ -63,18 +63,30 @@ export function AuthProvider({ children }) {
             return;
         }
 
+        let lastSessionId = null;
+
         supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-            setUser(session?.user ?? null);
-            if (session) refreshProfile(session);
+            if (session) {
+                lastSessionId = session.user?.id + session.access_token?.substring(0, 10);
+                setSession(session);
+                setUser(session.user);
+                refreshProfile(session);
+            }
             setLoading(false);
         });
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            setSession(session);
-            setUser(session?.user ?? null);
-            if (session) await refreshProfile(session);
-            setLoading(false);
+            const currentSessionId = session ? (session.user?.id + session.access_token?.substring(0, 10)) : null;
+            
+            if (currentSessionId !== lastSessionId) {
+                lastSessionId = currentSessionId;
+                setSession(session);
+                setUser(session?.user ?? null);
+                if (session) await refreshProfile(session);
+                setLoading(false);
+            } else if (!session) {
+                setLoading(false);
+            }
         });
 
         return () => subscription.unsubscribe();

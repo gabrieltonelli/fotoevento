@@ -19,7 +19,8 @@ import { AlertCircle, ArrowRight } from 'lucide-react';
 function ProtectedRoute({ children }) {
     const { user, profile, loading, profileLoading } = useAuth();
     
-    if (loading || (user && profileLoading)) {
+    // Solo mostramos el spinner si no tenemos usuario o si tenemos usuario pero el perfil aún no cargó la primera vez
+    if (loading || (user && profileLoading && !profile)) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-dark-950">
                 <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />

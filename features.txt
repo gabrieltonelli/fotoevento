@@ -1,13 +1,5 @@
 https://www.instagram.com/reel/DUtOfFMDpsG/
 
-El circuito de registro no esta del todo bien. 
-Problema detectado: al ingresar como usuario no registrado a la plataforma, muestra todo el landing page correctamente, si el usuario quiere comprar un plan pide que se registre primero y lo envia a la pantalla de registro, eso está correcto. EL problema es que cuando el usuario completa el registro se lo deriva nuevamente a la sección de precios. Lo normal es que el usuario piense: "ahora que ya estoy registrado me va a dejar seleccionar el plan", sin embargo, como la cuenta no ha sido activada, el sistema entiende que lo tiene que derivar nuevamente a la pagina de registro y entra en un loop en el cual el usuario no sabe que hacer.
-Solucion: Lo ideal sería que luego de registrarse, aparezca una pantalla solicitándole que confirme la cuenta revisando su casilla, advirtiendo que puede caer en spam y que la pantalla lo redireccinará para continuar el proceso de suscripción cuando eso suceda, que no cierre la pantalla y que vuelva allí cuando haya validado, etc (algo por el estilo, algo simple y fácil de entender). La pantalla debe quedarse haciendo consultas al backend el cual le responderá si la cuenta ya ha sido validada, y cuando el frontend detecte que asi fue, lo redireccione automáticamente a la de precios pero con el usuario ya logueado.
-Si tienes otra propuesta crea un plan y lo validamos juntos antes de empezar a tocar código.
-
-
-
-
 sistema de feedback y soporte, formulario de contacto?
 
 
@@ -34,4 +26,9 @@ agregar politicas de privacidad y terminos y condiciones que el usuario debe ace
 
 que pasa al activar un plan de forma anual? se deberia cobrar por adelantado el año y la suscripcion deberia pasar de periodicedad mensual a anual
 
+preguntarle a la ia como hacer para verificar que el cobro del mes siguiente se realiza correctamente
+
 testear validacion por ia
+
+cuando se cancela una suscripcion buscar la forma de que el usuario continue con el servicio hasta finalizar el periodo contratado y no se le cobre mas.
+actualizar el mensaje del modal donde se le informa al usuario que su suscripcion ha sido cancelada, indicandole que podra seguir usando el servicio hasta finalizar el periodo contratado.

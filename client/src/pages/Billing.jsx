@@ -4,13 +4,15 @@ import { api } from '../services/api';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import { motion } from 'framer-motion';
-import { CreditCard, Download, ExternalLink, Calendar, CheckCircle, Clock } from 'lucide-react';
+import { CreditCard, Download, ExternalLink, Calendar, CheckCircle, Clock, Crown } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Billing() {
-    const { profile, getToken } = useAuth();
+    const { profile, getToken, refreshProfile } = useAuth();
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [cancelling, setCancelling] = useState(false);
+    const [showCancelModal, setShowCancelModal] = useState(false);
 
     useEffect(() => {
         loadPayments();
@@ -88,6 +90,22 @@ export default function Billing() {
         invoiceWindow.print();
     };
 
+    const handleCancelSubscription = async () => {
+        setCancelling(true);
+        try {
+            const token = getToken();
+            await api.cancelSubscription(token);
+
+            toast.success('Suscripción cancelada correctamente');
+            await refreshProfile();
+            setShowCancelModal(false);
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setCancelling(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-dark-950">
             <Navbar />
@@ -107,7 +125,10 @@ export default function Billing() {
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                         <div>
                             <p className="text-amber-500 text-xs font-black uppercase tracking-widest mb-1">Tu Plan Actual</p>
-                            <h2 className="text-2xl font-bold text-white uppercase">{profile?.subscription_plan || 'Ninguno'}</h2>
+                            <h2 className="text-2xl font-bold text-white uppercase flex items-center gap-2">
+                                {profile?.subscription_plan || 'Ninguno'}
+                                {profile?.subscription_plan === 'premium' && <Crown className="w-6 h-6 text-amber-500" />}
+                            </h2>
                             <div className="flex items-center gap-4 mt-2">
                                 <span className="flex items-center gap-1.5 text-sm text-white/60">
                                     <Clock className="w-4 h-4 text-amber-500" />
@@ -121,10 +142,20 @@ export default function Billing() {
                                 )}
                             </div>
                         </div>
-                        <Link to="/pricing" className="btn-primary flex items-center gap-2">
-                            Cambiar Plan
-                            <ExternalLink className="w-4 h-4" />
-                        </Link>
+                        {profile?.subscription_plan !== 'premium' && (
+                            <Link to="/pricing" className="btn-primary flex items-center gap-2">
+                                Cambiar Plan
+                                <ExternalLink className="w-4 h-4" />
+                            </Link>
+                        )}
+                        {(profile?.subscription_plan === 'pro' || profile?.subscription_plan === 'premium') && (
+                            <button 
+                                onClick={() => setShowCancelModal(true)}
+                                className="px-4 py-2 rounded-xl border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-all text-sm font-semibold"
+                            >
+                                Cancelar Suscripción
+                            </button>
+                        )}
                     </div>
                 </motion.div>
 
@@ -197,6 +228,48 @@ export default function Billing() {
                     )}
                 </div>
             </main>
+
+            {/* Cancel Subscription Modal */}
+            <AnimatePresence>
+                {showCancelModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="glass-dark max-w-md w-full p-8 rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden"
+                        >
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500" />
+                            
+                            <h3 className="text-2xl font-display font-bold text-white mb-4">
+                                ¿Estás seguro de cancelar?
+                            </h3>
+                            <p className="text-white/60 mb-8 text-sm leading-relaxed">
+                                Al cancelar tu suscripción, **se detendrán los cobros automáticos** en tu procesador de pago. 
+                                <br /><br />
+                                <span className="text-red-400/80">Importante:</span> Perderás el acceso a tus beneficios premium (fotos ilimitadas, skins exclusivos y descarga de álbumes) de forma inmediata.
+                            </p>
+
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={handleCancelSubscription}
+                                    disabled={cancelling}
+                                    className="w-full py-4 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-all disabled:opacity-50"
+                                >
+                                    {cancelling ? 'Cancelando...' : 'Confirmar Cancelación'}
+                                </button>
+                                <button
+                                    onClick={() => setShowCancelModal(false)}
+                                    disabled={cancelling}
+                                    className="w-full py-4 rounded-xl bg-white/5 text-white/70 font-bold hover:bg-white/10 transition-all"
+                                >
+                                    Mantener mi Plan
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

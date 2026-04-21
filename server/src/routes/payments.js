@@ -220,4 +220,18 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 });
 
+/**
+ * POST /api/payments/cancel - Cancelar suscripción (Stop Debit)
+ */
+router.post('/cancel', authMiddleware, async (req, res) => {
+    try {
+        const { cancelSubscription } = await import('../services/payments.js');
+        const result = await cancelSubscription(req.user.id);
+        res.json(result);
+    } catch (err) {
+        console.error('Error al cancelar suscripción:', err);
+        res.status(500).json({ message: err.message || 'Error al procesar la cancelación' });
+    }
+});
+
 export default router;

@@ -117,6 +117,12 @@ export const api = {
             headers: { Authorization: `Bearer ${token}` },
         }),
 
+    cancelSubscription: (token) =>
+        fetchAPI('/api/payments/cancel', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+        }),
+
     // Public event info
     getPublicEvent: (shortCode) =>
         fetchAPI(`/api/public/event/${shortCode}`),

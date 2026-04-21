@@ -241,17 +241,19 @@ export async function createStripeCheckout({ plan, eventId, userId }) {
                 price_data: {
                     currency: selectedPlan.currency.toLowerCase(),
                     product_data: {
-                        name: `Foto Eventos ${selectedPlan.name}`,
+                        name: `Plan ${selectedPlan.name} - Foto Eventos`,
                         description: selectedPlan.features,
-                        images: [`${appUrl}/favicon.svg`],
                     },
-                    unit_amount: selectedPlan.price * 100, // Stripe usa centavos
+                    unit_amount: selectedPlan.price * 100,
+                    recurring: {
+                        interval: 'month',
+                    },
                 },
                 quantity: 1,
             },
         ],
-        mode: 'payment',
-        success_url: `${appUrl}/dashboard?payment=success&plan=${plan}&event=${eventId || ''}`,
+        mode: 'subscription',
+        success_url: `${appUrl}/dashboard?payment=success&plan=${plan}&event=${eventId || ''}&processor=stripe`,
         cancel_url: `${appUrl}/pricing?payment=cancelled`,
         client_reference_id: userId,
         metadata: {
@@ -282,9 +284,23 @@ export async function handleStripeWebhook(rawBody, signature) {
             plan,
             userId: user_id,
             eventId: event_id,
-            paymentId: session.payment_intent,
+            paymentId: session.subscription || session.payment_intent,
             processor: 'stripe',
         });
+    }
+
+    if (event.type === 'customer.subscription.deleted') {
+        const subscription = event.data.object;
+        const userId = subscription.metadata.user_id;
+
+        if (userId) {
+            const { supabase } = await import('./supabase.js');
+            await supabase.from('profiles').update({
+                subscription_plan: 'free',
+                subscription_status: 'inactive',
+                updated_at: new Date().toISOString()
+            }).eq('id', userId);
+        }
     }
 
     return { received: true };
@@ -343,9 +359,95 @@ export async function createMPPreference({ plan, eventId, userId, userEmail }) {
     }
 }
 
+export async function createMPSubscription({ plan, eventId, userId, userEmail, cycle }) {
+    const mpPreApproval = new PreApproval(mpClient);
+    const selectedPlan = PLANS[plan];
+    const appUrl = process.env.VITE_APP_URL || 'http://localhost:5173';
+
+    try {
+        const result = await mpPreApproval.create({
+            body: {
+                reason: `Suscripción ${selectedPlan.name} - Foto Eventos`,
+                external_reference: JSON.stringify({ plan, event_id: eventId || '', user_id: userId }),
+                payer_email: userEmail,
+                auto_recurring: {
+                    frequency: 1,
+                    frequency_type: cycle === 'annual' ? 'months' : 'months', // Anual se maneja con 12 meses? MP preapproval es un poco limitado
+                    transaction_amount: selectedPlan.price,
+                    currency_id: 'ARS',
+                },
+                back_url: `${appUrl}/dashboard?payment=success&plan=${plan}&event=${eventId || ''}&processor=mercadopago`,
+                status: 'pending',
+            }
+        });
+
+        return {
+            url: result.init_point,
+            sandboxUrl: result.sandbox_init_point || result.init_point,
+            subscriptionId: result.id,
+            processor: 'mercadopago',
+        };
+    } catch (error) {
+        console.error("❌ Error MP Subscription:", error.response?.data || error.message);
+        throw new Error("MercadoPago Subscription Error: " + (error.response?.data?.message || error.message));
+    }
+}
+
 export async function createMPCheckout({ plan, eventId, userId, userEmail, cycle }) {
-    // Usamos Preference (Checkout Pro) para mayor compatibilidad
-    return createMPPreference({ plan, eventId, userId, userEmail });
+    // Si es MP y queremos suscripción recurrente real
+    return createMPSubscription({ plan, eventId, userId, userEmail, cycle });
+}
+
+/**
+ * cancelSubscription - Detener cobros recurrentes
+ */
+export async function cancelSubscription(userId) {
+    // 1. Obtener el último pago completado para saber el procesador y el ID externo
+    const { data: lastPayment, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+    if (error || !lastPayment) {
+        throw new Error('No se encontró una suscripción activa para cancelar');
+    }
+
+    const { processor, payment_external_id } = lastPayment;
+
+    if (processor === 'stripe' && stripe) {
+        // En Stripe, payment_external_id debe ser el subscription_id (sub_...)
+        try {
+            await stripe.subscriptions.update(payment_external_id, {
+                cancel_at_period_end: true
+            });
+        } catch (err) {
+            console.error('Error al cancelar en Stripe:', err.message);
+        }
+    } else if (processor === 'mercadopago') {
+        try {
+            const mpPreApproval = new PreApproval(mpClient);
+            await mpPreApproval.update({
+                id: payment_external_id,
+                body: { status: 'cancelled' }
+            });
+        } catch (err) {
+            console.error('Error al cancelar en MercadoPago:', err.message);
+        }
+    }
+
+    // 2. Actualizar perfil a FREE (opcional: esperar a que termine el periodo, 
+    // pero para seguridad de 'Stop Debit' el usuario suele querer feedback inmediato)
+    await supabase.from('profiles').update({
+        subscription_plan: 'free',
+        subscription_status: 'cancelled',
+        updated_at: new Date().toISOString()
+    }).eq('id', userId);
+
+    return { success: true, message: 'Suscripción cancelada correctamente' };
 }
 
 export async function handleMPWebhook(query, body) {

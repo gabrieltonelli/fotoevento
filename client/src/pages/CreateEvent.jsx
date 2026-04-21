@@ -11,7 +11,7 @@ import Navbar from '../components/layout/Navbar';
 import toast from 'react-hot-toast';
 
 export default function CreateEvent() {
-    const { getToken } = useAuth();
+    const { user, profile, getToken } = useAuth();
     const navigate = useNavigate();
     console.log('--- DBG: Render CreateEvent ---');
     const [loading, setLoading] = useState(false);
@@ -199,18 +199,18 @@ export default function CreateEvent() {
                                     <button
                                         key={skin.value}
                                         type="button"
-                                        disabled={skin.premium && form.plan === 'free'}
+                                        disabled={skin.premium && profile?.subscription_plan === 'free'}
                                         onClick={() => handleChange('skin', skin.value)}
                                         className={`relative rounded-xl border overflow-hidden transition-all ${form.skin === skin.value
                                                 ? 'border-primary-500 ring-2 ring-primary-500/30'
                                                 : 'border-white/5 hover:border-white/20'
-                                            } ${skin.premium && form.plan === 'free' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            } ${skin.premium && profile?.subscription_plan === 'free' ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
                                         <div className={`h-16 ${skin.preview}`} />
                                         <div className="p-2 bg-dark-900/50">
                                             <span className="text-xs font-medium text-white/70">{skin.label}</span>
                                         </div>
-                                        {skin.premium && form.plan === 'free' && (
+                                        {skin.premium && profile?.subscription_plan === 'free' && (
                                             <div className="absolute top-1 right-1">
                                                 <Crown className="w-3 h-3 text-amber-400" />
                                             </div>

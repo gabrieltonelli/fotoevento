@@ -170,7 +170,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Upgrade Plan Banner */}
-                {!hasPremium && events.length > 0 && (
+                {profile?.subscription_plan !== 'premium' && events.length > 0 && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}

@@ -74,6 +74,14 @@ export default function Pricing() {
         }
     }, [user, getToken]);
 
+    // Redirección automática si el usuario ya tiene un plan y no está en modo upgrade
+    useEffect(() => {
+        if (!loadingPlan && profile && profile.subscription_plan !== 'none' && !searchParams.get('upgrade')) {
+            // Si el perfil está activo, lo mandamos al dashboard
+            navigate('/dashboard', { replace: true });
+        }
+    }, [profile, navigate, searchParams, loadingPlan]);
+
     const trialsRemaining = Math.max(0, freeTrialLimit - eventsCount);
     const hasTrialsLeft = trialsRemaining > 0 || profile?.subscription_plan !== 'free';
 

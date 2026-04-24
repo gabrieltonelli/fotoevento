@@ -147,7 +147,7 @@ export default function Billing() {
                             </div>
                         </div>
                         {profile?.subscription_plan !== 'premium' && (
-                            <Link to="/pricing" className="btn-primary flex items-center gap-2">
+                            <Link to="/pricing?upgrade=true" className="btn-primary flex items-center gap-2">
                                 Cambiar Plan
                                 <ExternalLink className="w-4 h-4" />
                             </Link>

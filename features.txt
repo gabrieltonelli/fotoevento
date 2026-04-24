@@ -1,18 +1,26 @@
-https://www.instagram.com/reel/DUtOfFMDpsG/
 
-----------Dudas:
+--------Features
 
-preguntarle a la ia como hacer para verificar que el cobro del mes siguiente se realiza correctamente
+mejorar los skings disponibles en diferentes planes
+
+
+----------Acciones a realizar
 
 promocion en redes sociales pommelli
 
+ver mas ideas de features en: https://www.instagram.com/reel/DUtOfFMDpsG/
+
 ----QA
+
+verificar que la suscripcion mensual se renueve correctamente
 
 probar que los mails lleguen NOTIFY_DAYS_BEFORE antes
 
 que pasa al activar un plan de forma anual? se deberia cobrar por adelantado el año y la suscripcion deberia pasar de periodicedad mensual a anual
 
 testear validacion por ia
+
+ver si realmente se le pide registro a los usuarios que quieren cargar fotos sobre un evento configurado con la opcion de "Requiere registro para subir fotos" en true
 
 ----Internacionalizacion
 

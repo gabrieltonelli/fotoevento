@@ -194,7 +194,7 @@ export default function Dashboard() {
                         </div>
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full md:w-auto relative z-10">
                             <Link 
-                                to="/pricing" 
+                                to="/pricing?upgrade=true" 
                                 className="flex items-center justify-center gap-2 px-8 py-3 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white font-black tracking-wider uppercase text-xs shadow-[0_0_20px_rgba(251,191,36,0.3)] hover:shadow-[0_0_25px_rgba(251,191,36,0.5)] transition-all"
                             >
                                 <Crown className="w-4 h-4" />
@@ -374,7 +374,7 @@ export default function Dashboard() {
 
                             <div className="flex flex-col gap-3">
                                 <Link
-                                    to="/pricing"
+                                    to="/pricing?upgrade=true"
                                     className="w-full btn-primary !bg-gradient-to-r !from-amber-400 !to-orange-500 !border-none text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2"
                                 >
                                     Ver Planes y Precios

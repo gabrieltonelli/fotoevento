@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check, X, Star, Zap, Crown, ArrowRight, CreditCard, Loader2 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
+import Chatbot from '../components/common/Chatbot';
 import toast from 'react-hot-toast';
 
 // Logos de procesadores
@@ -469,6 +470,7 @@ export default function Pricing() {
             </AnimatePresence>
 
             <Footer />
+            <Chatbot />
         </div>
     );
 }

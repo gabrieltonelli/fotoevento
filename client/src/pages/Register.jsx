@@ -23,8 +23,15 @@ export default function Register() {
         return regex.test(pw);
     };
 
+    const [termsAccepted, setTermsAccepted] = useState(false);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!termsAccepted) {
+            toast.error('Debés aceptar los términos y condiciones');
+            return;
+        }
 
         if (password !== confirmPassword) {
             toast.error('Las contraseñas no coinciden');
@@ -143,6 +150,19 @@ export default function Register() {
                                 minLength={8}
                                 maxLength={72}
                             />
+                        </div>
+
+                        <div className="flex items-start gap-3 py-2">
+                            <input
+                                type="checkbox"
+                                id="terms"
+                                checked={termsAccepted}
+                                onChange={(e) => setTermsAccepted(e.target.checked)}
+                                className="mt-1 w-4 h-4 rounded border-white/10 bg-white/5 text-primary-500 focus:ring-primary-500 focus:ring-offset-dark-950"
+                            />
+                            <label htmlFor="terms" className="text-sm text-white/60 leading-tight">
+                                Acepto los <Link to="/terms" className="text-white hover:underline">Términos de Servicio</Link> y la <Link to="/privacy" className="text-white hover:underline">Política de Privacidad</Link>.
+                            </label>
                         </div>
 
                         <button type="submit" disabled={loading} className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-50">

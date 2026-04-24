@@ -13,6 +13,9 @@ import EventScreen from './pages/EventScreen';
 import Pricing from './pages/Pricing';
 import Billing from './pages/Billing';
 import VerifyEmail from './pages/VerifyEmail';
+import Support from './pages/Support';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, ArrowRight } from 'lucide-react';
 
@@ -108,6 +111,9 @@ export default function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/support" element={<Support />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/events/new" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />

@@ -169,6 +169,8 @@ CREATE TABLE IF NOT EXISTS profiles (
   subscription_expiry TIMESTAMPTZ,
   trial_used BOOLEAN DEFAULT false,
   trial_expires_at TIMESTAMPTZ,
+  last_expiry_warning_sent_at TIMESTAMPTZ,
+  last_expiry_notified_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

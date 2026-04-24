@@ -149,6 +149,8 @@ export async function activatePlan({ plan, userId, eventId, paymentId, processor
             subscription_plan: plan,
             subscription_status: 'active',
             subscription_expiry: expiryDate.toISOString(),
+            last_expiry_warning_sent_at: null,
+            last_expiry_notified_at: null,
             updated_at: new Date().toISOString()
         };
 

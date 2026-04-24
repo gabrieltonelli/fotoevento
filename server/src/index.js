@@ -6,6 +6,8 @@ import photoRoutes from './routes/photos.js';
 import paymentRoutes from './routes/payments.js';
 import publicRoutes from './routes/public.js';
 import profileRoutes from './routes/profile.js';
+import supportRoutes from './routes/support.js';
+import { initSubscriptionCron } from './services/subscriptionCron.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -23,6 +25,10 @@ app.use('/api/events', photoRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/support', supportRoutes);
+
+// Initialize Cron Jobs
+initSubscriptionCron();
 
 // Health check
 app.get('/api/health', (req, res) => {

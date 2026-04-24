@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useState } from 'react';
-import { Camera, Menu, X, LogOut, LayoutDashboard, CreditCard, Crown, ChevronDown, User as UserIcon } from 'lucide-react';
+import { Camera, Menu, X, LogOut, LayoutDashboard, CreditCard, Crown, ChevronDown, User as UserIcon, LifeBuoy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Navbar() {
@@ -37,6 +37,7 @@ export default function Navbar() {
                             <>
                                 <Link to="/#features" className="btn-ghost text-sm">Características</Link>
                                 <Link to="/pricing" className="btn-ghost text-sm">Precios</Link>
+                                <Link to="/support" className="btn-ghost text-sm">Soporte</Link>
                                 <Link to="/#faq" className="btn-ghost text-sm">FAQ</Link>
                                 <div className="flex items-center gap-3">
                                     <Link to="/login" className="btn-ghost text-sm">Iniciar Sesión</Link>
@@ -64,6 +65,10 @@ export default function Navbar() {
                                 <Link to="/billing" className="flex items-center gap-2 btn-ghost text-sm">
                                     <CreditCard className="w-4 h-4" />
                                     Facturación
+                                </Link>
+                                <Link to="/support" className="flex items-center gap-2 btn-ghost text-sm">
+                                    <LifeBuoy className="w-4 h-4" />
+                                    Soporte
                                 </Link>
 
                                 {/* User Profile Dropdown */}
@@ -142,6 +147,7 @@ export default function Navbar() {
                                 <>
                                     <Link to="/#features" className="block btn-ghost text-sm" onClick={() => setMobileOpen(false)}>Características</Link>
                                     <Link to="/pricing" className="block btn-ghost text-sm" onClick={() => setMobileOpen(false)}>Precios</Link>
+                                    <Link to="/support" className="block btn-ghost text-sm" onClick={() => setMobileOpen(false)}>Soporte</Link>
                                     <Link to="/#faq" className="block btn-ghost text-sm" onClick={() => setMobileOpen(false)}>FAQ</Link>
                                     <Link to="/login" className="block btn-ghost text-sm" onClick={() => setMobileOpen(false)}>Iniciar Sesión</Link>
                                     <Link to="/register" className="block btn-primary text-sm text-center" onClick={() => setMobileOpen(false)}>Comenzar Gratis</Link>
@@ -149,6 +155,7 @@ export default function Navbar() {
                             ) : (
                                 <>
                                     <Link to="/dashboard" className="block btn-ghost text-sm" onClick={() => setMobileOpen(false)}>Dashboard</Link>
+                                    <Link to="/support" className="block btn-ghost text-sm" onClick={() => setMobileOpen(false)}>Soporte</Link>
                                     <button onClick={handleSignOut} className="block w-full text-left btn-ghost text-sm text-red-400">Salir</button>
                                 </>
                             )}
